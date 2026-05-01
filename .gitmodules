@@ -1,0 +1,7 @@
+# Submodules are added in Phase 2 of the implementation plan.
+# See .copilot-tracking/details/2026-05-01/dab-radio-lyrics-app-details.md (Step 2.1).
+#
+# [submodule "omri-usb"]
+#     path = omri-usb
+#     url = https://github.com/hradio/omri-usb.git
+#     # Pin to a specific commit SHA recorded in omri-usb/.copilot-build-notes.md

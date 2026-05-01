@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Radio Lyric</string>
+
+    <!-- Notification channels -->
+    <string name="notification_channel_playback">Playback</string>
+    <string name="notification_channel_playback_description">Now-playing controls for the DAB radio.</string>
+
+    <!-- Accessibility / placeholder strings -->
+    <string name="placeholder_now_playing">Now Playing</string>
+    <string name="placeholder_lyrics">Lyrics</string>
+    <string name="placeholder_stations">Stations</string>
+    <string name="cd_play">Play</string>
+    <string name="cd_pause">Pause</string>
+    <string name="cd_next_station">Next station</string>
+    <string name="cd_previous_station">Previous station</string>
+</resources>

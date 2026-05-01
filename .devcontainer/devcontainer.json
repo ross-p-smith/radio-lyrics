@@ -1,0 +1,53 @@
+{
+  "name": "radio-lyric (Android Kotlin)",
+  "build": { "dockerfile": "Dockerfile" },
+
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "username": "vscode",
+      "upgradePackages": true
+    },
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+
+  // Linux host: simplest networking for ADB-over-Wi-Fi to the car head unit.
+  "runArgs": ["--network=host"],
+
+  // Persistent caches (faster rebuilds, no host pollution)
+  "mounts": [
+    "source=radio-lyric-gradle,target=/home/vscode/.gradle,type=volume",
+    "source=radio-lyric-android-cache,target=/home/vscode/.android,type=volume"
+  ],
+
+  "remoteEnv": {
+    "ANDROID_HOME": "/opt/android-sdk",
+    "ANDROID_SDK_ROOT": "/opt/android-sdk",
+    "GRADLE_OPTS": "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g"
+  },
+
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "fwcd.kotlin",
+        "vscjava.vscode-gradle",
+        "redhat.java",
+        "vscjava.vscode-java-debug",
+        "vscjava.vscode-java-test",
+        "naco-siren.gradle-language",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "java.configuration.runtimes": [
+          { "name": "JavaSE-21", "path": "/usr/lib/jvm/msopenjdk-21", "default": true }
+        ],
+        "kotlin.languageServer.enabled": true,
+        "files.exclude": { "**/.gradle": true, "**/build": true }
+      }
+    }
+  },
+
+  "remoteUser": "vscode"
+}

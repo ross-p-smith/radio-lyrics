@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Mekede USB DAB+ dongle (Raon RTV chipset).
+    Vendor ID 0x16C0 (5824 decimal) / Product ID 0x05DC (1500 decimal).
+    Source: .copilot-tracking/research/subagents/2026-04-30/mekede-dab-usb-research.md
+-->
+<resources>
+    <usb-device vendor-id="5824" product-id="1500" />
+</resources>
