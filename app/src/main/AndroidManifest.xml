@@ -68,13 +68,40 @@
             </intent-filter>
         </receiver>
 
-        <!-- TODO(Phase 9): add BOOT_COMPLETED + OEM ACC intent-filters once
-             BootReceiver is implemented. Intentionally registered without filters
-             here so the manifest declares the component. -->
+        <!-- Phase 9: autostart. AOSP boot/replace events plus a long tail of OEM
+             ACC-on broadcasts emitted by Mekede / FYT / Microntek / Cayboy /
+             Carboy / Wits / MTC / MTCD / MTCE / XY / HTC firmwares. We register
+             every plausible action because head-unit firmwares rarely document
+             which ones they actually emit. -->
         <receiver
             android:name=".autostart.BootReceiver"
             android:enabled="true"
-            android:exported="true" />
+            android:exported="true"
+            android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
+            <intent-filter>
+                <!-- AOSP boot signals -->
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <!-- MediaTek / quick-boot variants -->
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.BOOT_IPO" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+                <!-- Confirmed OEM ACC-on broadcasts -->
+                <action android:name="com.fyt.boot.ACCON" />
+                <action android:name="com.glsx.boot.ACCON" />
+                <action android:name="com.cayboy.action.ACC_ON" />
+                <action android:name="com.carboy.action.ACC_ON" />
+                <action android:name="com.microntek.startApp" />
+                <!-- Defensive folklore (seen in firmware logs / forum posts) -->
+                <action android:name="android.intent.action.ACC_ON" />
+                <action android:name="com.android.action.ACC_ON" />
+                <action android:name="com.xy.power.ACC_ON" />
+                <action android:name="com.mtcd.action.ACC_ON" />
+                <action android:name="com.mtce.action.ACC_ON" />
+                <action android:name="com.wits.action.ACC_ON" />
+            </intent-filter>
+        </receiver>
 
     </application>
 </manifest>
