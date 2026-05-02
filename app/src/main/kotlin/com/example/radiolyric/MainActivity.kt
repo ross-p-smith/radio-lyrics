@@ -15,47 +15,61 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.example.radiolyric.ui.theme.RadioLyricTheme
+import com.example.radiolyric.usb.UsbPermissionGateway
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject lateinit var usbPermissionGateway: UsbPermissionGateway
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             RadioLyricTheme {
                 Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background,
-                ) {
-                    AppNavigation()
-                }
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background,
+                ) { AppNavigation() }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Register before snapshotting so that an immediately-granted permission broadcast
+        // (or one that arrives during the request) is captured.
+        usbPermissionGateway.register()
+        usbPermissionGateway.snapshotAndRequest()
+    }
+
+    override fun onPause() {
+        usbPermissionGateway.unregister()
+        super.onPause()
     }
 }
 
 /**
- * Placeholder navigation host. Phase 8 replaces this with a real NavHost
- * (Now Playing / Lyrics / Stations destinations).
+ * Placeholder navigation host. Phase 8 replaces this with a real NavHost (Now Playing / Lyrics /
+ * Stations destinations).
  */
 @Composable
 fun AppNavigation() {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = stringResource(id = R.string.app_name),
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.onBackground,
+                text = stringResource(id = R.string.app_name),
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.onBackground,
         )
         Text(
-            text = stringResource(id = R.string.placeholder_now_playing),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onBackground,
+                text = stringResource(id = R.string.placeholder_now_playing),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onBackground,
         )
     }
 }

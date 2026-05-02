@@ -83,8 +83,8 @@ android {
 dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
-    // TODO(Phase 2 - Step 2.1): wire the vendored DAB driver once the submodule lands.
-    // implementation(project(":omri-usb"))
+    // Phase 2/4: vendored LGPL-2.1 DAB driver (USB DAB only).
+    implementation(project(":omri-usb"))
 
     // AndroidX core
     implementation(libs.androidx.core.ktx)

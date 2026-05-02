@@ -22,7 +22,8 @@ dependencyResolutionManagement {
 
 rootProject.name = "radio-lyric"
 include(":app")
-// TODO(Phase 2 - Step 2.1): include(":omri-usb") once the Git submodule at omri-usb/
-// is added and ported (see .copilot-tracking/details/2026-05-01/dab-radio-lyrics-app-details.md
-// Steps 2.1-2.2). Commented out so `./gradlew help` succeeds before the submodule lands.
-// include(":omri-usb")
+// :omri-usb is the LGPL-2.1 vendored DAB driver at omri-usb/omriusb/.
+// The submodule's outer omri-usb/ directory holds its own legacy build.gradle
+// that we no longer use; only the inner omriusb/ Android library is included.
+include(":omri-usb")
+project(":omri-usb").projectDir = file("omri-usb/omriusb")

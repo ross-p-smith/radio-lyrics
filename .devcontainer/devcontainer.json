@@ -41,7 +41,7 @@
       ],
       "settings": {
         "java.configuration.runtimes": [
-          { "name": "JavaSE-21", "path": "/usr/lib/jvm/msopenjdk-21", "default": true }
+          { "name": "JavaSE-21", "path": "/usr/lib/jvm/msopenjdk-current", "default": true }
         ],
         "kotlin.languageServer.enabled": true,
         "files.exclude": { "**/.gradle": true, "**/build": true }
