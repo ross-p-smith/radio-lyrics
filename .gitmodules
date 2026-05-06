@@ -1,7 +1,10 @@
-# Submodule pinned to a specific upstream commit for reproducibility.
+# Submodule pinned to a downstream branch on our fork.
 # Build status and applied patches are tracked in omri-usb/.copilot-build-notes.md.
+# Upstream URL: https://github.com/hradio/omri-usb.git
+# Previously pinned: hradio/omri-usb@12f4b8ede51509226da102952646b97cb3c5752f (2026-05-01..2026-05-06)
 [submodule "omri-usb"]
 path = omri-usb
-url = https://github.com/hradio/omri-usb.git
-# Pinned SHA: 12f4b8ede51509226da102952646b97cb3c5752f
-# ("Initial release", sole commit on master as of 2026-05-01)
+url = https://github.com/ross-p-smith/omri-usb.git
+# Pinned SHA: 2d8d534cf2f087115a7ff47325b8c08b2c589436
+# Branch:     radio-lyric (long-lived; do not delete)
+# Carries:    Android 12/13 UsbHelper fixes (WI-01)
