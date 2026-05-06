@@ -24,6 +24,8 @@ Requires JDK 17+, Android SDK with `compileSdk=35`, NDK `27.0.12077973`.
 ./gradlew :app:assembleDebug                                  # debug APK (FakeRadioSource)
 ./gradlew :app:assembleRelease                                # release APK (real omri-usb backend)
 ./gradlew :app:testDebugUnitTest                              # unit tests
+./gradlew -Pradio.arm64Only=true :app:assembleRelease         # internal-only, halves APK size on DUDU7 (arm64 only)
+./gradlew -Pradio.includeFolkloreAccActions=false :app:assembleDebug   # drop unverified OEM ACC_ON broadcasts
 ```
 
 ## Install

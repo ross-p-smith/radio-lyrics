@@ -22,7 +22,40 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            // Default keeps both ABIs. Pass `-Pradio.arm64Only=true` to halve APK
+            // size for verified 64-bit-only targets such as the Mekede DUDU7
+            // (see docs/target-device-facts.md §2).
+            val arm64Only = (project.findProperty("radio.arm64Only") as? String) == "true"
+            abiFilters +=
+                if (arm64Only) listOf("arm64-v8a") else listOf("arm64-v8a", "armeabi-v7a")
+        }
+
+        // Folklore OEM ACC_ON actions for the BootReceiver intent-filter. These
+        // were not observed on the live Mekede DUDU7 capture (2026-05-05) but
+        // are kept registered by default for other Mekede / FYT / Microntek /
+        // Cayboy / Carboy / Wits / MTC / XY firmwares. Pass
+        // `-Pradio.includeFolkloreAccActions=false` to swap them for inert
+        // namespaced placeholders without losing the manifest slot.
+        val includeFolklore =
+                (project.findProperty("radio.includeFolkloreAccActions") as? String) != "false"
+        val folkloreActions =
+                listOf(
+                        "com.fyt.boot.ACCON",
+                        "com.glsx.boot.ACCON",
+                        "com.cayboy.action.ACC_ON",
+                        "com.carboy.action.ACC_ON",
+                        "com.microntek.startApp",
+                        "android.intent.action.ACC_ON",
+                        "com.android.action.ACC_ON",
+                        "com.xy.power.ACC_ON",
+                        "com.mtcd.action.ACC_ON",
+                        "com.mtce.action.ACC_ON",
+                        "com.wits.action.ACC_ON",
+                )
+        folkloreActions.forEachIndexed { index, action ->
+            val key = "accAction${index + 1}"
+            manifestPlaceholders[key] =
+                    if (includeFolklore) action else "com.example.radiolyric.disabled.acc${index + 1}"
         }
     }
 
@@ -77,6 +110,10 @@ android {
                 "META-INF/licenses/**",
             )
         }
+    }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 }
 

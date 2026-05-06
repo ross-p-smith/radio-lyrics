@@ -55,6 +55,14 @@ class RadioPlayer(
                 .build()
     }
 
+    override fun handlePrepare() =
+            com.google.common.util.concurrent.Futures.immediateVoidFuture().also {
+                // No-op: audio is produced out-of-band by AudioPump. We declare COMMAND_PREPARE
+                // because Media3's MediaSession invokes prepare() before play(); without an
+                // override SimpleBasePlayer throws IllegalStateException.
+                invalidateState()
+            }
+
     override fun handleSetPlayWhenReady(playWhenReady: Boolean) =
             com.google.common.util.concurrent.Futures.immediateVoidFuture().also {
                 this.playWhenReady = playWhenReady

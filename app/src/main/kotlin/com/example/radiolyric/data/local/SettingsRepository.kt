@@ -63,6 +63,18 @@ constructor(
                 )
             }
 
+    /**
+     * Whether we have already prompted the user for the Android 13+
+     * `POST_NOTIFICATIONS` runtime permission. Used to ensure we ask at most
+     * once per install (subsequent re-asks must go through OS settings).
+     */
+    val notificationPermissionAsked: Flow<Boolean> =
+            store.data.map { prefs -> prefs[KEY_NOTIFICATION_PERMISSION_ASKED] ?: false }
+
+    suspend fun setNotificationPermissionAsked(value: Boolean) {
+        store.edit { it[KEY_NOTIFICATION_PERMISSION_ASKED] = value }
+    }
+
     suspend fun setTheme(theme: ThemeMode) {
         store.edit { it[KEY_THEME] = theme.name }
     }
@@ -84,5 +96,7 @@ constructor(
         private val KEY_FONT_SCALE = floatPreferencesKey("font_scale")
         private val KEY_DEFAULT_STATION_SID = intPreferencesKey("default_station_sid")
         private val KEY_KEEP_SCREEN_ON_LYRICS = booleanPreferencesKey("keep_screen_on_lyrics")
+        private val KEY_NOTIFICATION_PERMISSION_ASKED =
+                booleanPreferencesKey("notification_permission_asked")
     }
 }

@@ -50,6 +50,8 @@ class PlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
+        // AudioVolumePolicy: never call AudioManager.setStreamVolume(STREAM_MUSIC, …)
+        // — see AudioVolumePolicy.kt (Mekede DUDU7 SYU canbus overwrites it every ~10s).
         PlaybackNotification.ensureChannel(this)
         player =
                 RadioPlayer(

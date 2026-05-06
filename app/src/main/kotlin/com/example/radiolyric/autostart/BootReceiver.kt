@@ -38,8 +38,13 @@ class BootReceiver : BroadcastReceiver() {
         }
     }
 
-    private companion object {
+    companion object {
         private const val TAG = "BootReceiver"
-        private const val EXTRA_TRIGGER = "trigger"
+
+        /**
+         * Extra carrying the originating broadcast action so [PlaybackService] can
+         * record telemetry / trigger source for diagnostics.
+         */
+        const val EXTRA_TRIGGER: String = "trigger"
     }
 }

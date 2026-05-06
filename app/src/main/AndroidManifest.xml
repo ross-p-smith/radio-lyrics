@@ -68,11 +68,13 @@
             </intent-filter>
         </receiver>
 
-        <!-- Phase 9: autostart. AOSP boot/replace events plus a long tail of OEM
-             ACC-on broadcasts emitted by Mekede / FYT / Microntek / Cayboy /
-             Carboy / Wits / MTC / MTCD / MTCE / XY / HTC firmwares. We register
-             every plausible action because head-unit firmwares rarely document
-             which ones they actually emit. -->
+        <!-- Phase 9: autostart. AOSP boot/replace events plus the OEM ACC-on
+             broadcasts this firmware actually emits (verified live on Mekede
+             DUDU7, see docs/target-device-facts.md §9). The 11 unverified
+             ACC_ON actions remain registered by default so other Mekede / FYT /
+             Microntek firmwares stay covered, but they are gated behind the
+             `includeFolkloreAccActions` Gradle property so we can A/B-trim
+             them by passing `-Pradio.includeFolkloreAccActions=false`. -->
         <receiver
             android:name=".autostart.BootReceiver"
             android:enabled="true"
@@ -87,19 +89,22 @@
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
                 <action android:name="android.intent.action.BOOT_IPO" />
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
-                <!-- Confirmed OEM ACC-on broadcasts -->
-                <action android:name="com.fyt.boot.ACCON" />
-                <action android:name="com.glsx.boot.ACCON" />
-                <action android:name="com.cayboy.action.ACC_ON" />
-                <action android:name="com.carboy.action.ACC_ON" />
-                <action android:name="com.microntek.startApp" />
+                <!-- Verified live on Mekede DUDU7 (2026-05-05 capture). -->
+                <action android:name="android.intent.action.ACTION_POWER_CONNECTED" />
+                <action android:name="com.nwd.action.ACTION_MCU_STATE_CHANGE" />
+                <!-- Confirmed OEM ACC-on broadcasts (gated, see manifestPlaceholders) -->
+                <action android:name="${accAction1}" />
+                <action android:name="${accAction2}" />
+                <action android:name="${accAction3}" />
+                <action android:name="${accAction4}" />
+                <action android:name="${accAction5}" />
                 <!-- Defensive folklore (seen in firmware logs / forum posts) -->
-                <action android:name="android.intent.action.ACC_ON" />
-                <action android:name="com.android.action.ACC_ON" />
-                <action android:name="com.xy.power.ACC_ON" />
-                <action android:name="com.mtcd.action.ACC_ON" />
-                <action android:name="com.mtce.action.ACC_ON" />
-                <action android:name="com.wits.action.ACC_ON" />
+                <action android:name="${accAction6}" />
+                <action android:name="${accAction7}" />
+                <action android:name="${accAction8}" />
+                <action android:name="${accAction9}" />
+                <action android:name="${accAction10}" />
+                <action android:name="${accAction11}" />
             </intent-filter>
         </receiver>
 
