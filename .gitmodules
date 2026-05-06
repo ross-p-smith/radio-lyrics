@@ -5,6 +5,6 @@
 [submodule "omri-usb"]
 path = omri-usb
 url = https://github.com/ross-p-smith/omri-usb.git
-# Pinned SHA: 2d8d534cf2f087115a7ff47325b8c08b2c589436
+# Pinned SHA: 86cdcb1d7888273586b6f656cb6fadf69ae43713
 # Branch:     radio-lyric (long-lived; do not delete)
 # Carries:    Android 12/13 UsbHelper fixes (WI-01)
