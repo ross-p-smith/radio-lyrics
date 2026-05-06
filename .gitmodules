@@ -5,6 +5,6 @@
 [submodule "omri-usb"]
 path = omri-usb
 url = https://github.com/ross-p-smith/omri-usb.git
-# Pinned SHA: 86cdcb1d7888273586b6f656cb6fadf69ae43713
+# Pinned SHA: 2470c0480bf54e92918a2c323dff94c2f89c55aa
 # Branch:     radio-lyric (long-lived; do not delete)
-# Carries:    Android 12/13 UsbHelper fixes (WI-01)
+# Carries:    Android 12/13 UsbHelper fixes (WI-01) + wRadio C100 setRegister ack drain
