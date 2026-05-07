@@ -46,9 +46,9 @@ import java.util.Locale
 
 /**
  * In-app log viewer (debug builds only). Mirrors [AppLog] into a scrollable list with level
- * filters, free-text search, copy-to-clipboard, and clear actions. Auto-scrolls to the bottom
- * only when the user is already at the bottom — preserves scroll position when the user has
- * scrolled up to inspect history.
+ * filters, free-text search, copy-to-clipboard, and clear actions. Auto-scrolls to the bottom only
+ * when the user is already at the bottom — preserves scroll position when the user has scrolled up
+ * to inspect history.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,16 +57,17 @@ fun DevLogScreen(modifier: Modifier = Modifier) {
     var query by remember { mutableStateOf("") }
     val enabledLevels = remember { mutableStateOf(LogEntry.Level.values().toSet()) }
 
-    val filtered by remember(entries, query, enabledLevels.value) {
-        derivedStateOf {
-            entries.filter {
-                it.level in enabledLevels.value &&
-                        (query.isBlank() ||
-                                it.message.contains(query, ignoreCase = true) ||
-                                it.tag.contains(query, ignoreCase = true))
+    val filtered by
+            remember(entries, query, enabledLevels.value) {
+                derivedStateOf {
+                    entries.filter {
+                        it.level in enabledLevels.value &&
+                                (query.isBlank() ||
+                                        it.message.contains(query, ignoreCase = true) ||
+                                        it.tag.contains(query, ignoreCase = true))
+                    }
+                }
             }
-        }
-    }
 
     val listState = rememberLazyListState()
     val clipboard = LocalClipboardManager.current
@@ -95,7 +96,9 @@ fun DevLogScreen(modifier: Modifier = Modifier) {
                                     onClick = {
                                         clipboard.setText(
                                                 AnnotatedString(
-                                                        filtered.joinToString("\n") { it.formatted() },
+                                                        filtered.joinToString("\n") {
+                                                            it.formatted()
+                                                        },
                                                 ),
                                         )
                                     },
@@ -117,7 +120,8 @@ fun DevLogScreen(modifier: Modifier = Modifier) {
                             selected = level in enabledLevels.value,
                             onClick = {
                                 enabledLevels.value =
-                                        if (level in enabledLevels.value) enabledLevels.value - level
+                                        if (level in enabledLevels.value)
+                                                enabledLevels.value - level
                                         else enabledLevels.value + level
                             },
                             label = { Text(level.name) },
@@ -129,8 +133,7 @@ fun DevLogScreen(modifier: Modifier = Modifier) {
                     onValueChange = { query = it },
                     placeholder = { Text("Filter (tag or message)") },
                     singleLine = true,
-                    modifier =
-                            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
             )
             LazyColumn(
                     state = listState,
@@ -164,9 +167,10 @@ private fun LogEntry.formatted(): String {
     return if (throwable.isNullOrBlank()) base else "$base\n$throwable"
 }
 
-private fun LogEntry.Level.background(): Color = when (this) {
-    LogEntry.Level.D -> Color.Transparent
-    LogEntry.Level.I -> Color(0x1100AA00)
-    LogEntry.Level.W -> Color(0x22FFA500)
-    LogEntry.Level.E -> Color(0x33FF3030)
-}
+private fun LogEntry.Level.background(): Color =
+        when (this) {
+            LogEntry.Level.D -> Color.Transparent
+            LogEntry.Level.I -> Color(0x1100AA00)
+            LogEntry.Level.W -> Color(0x22FFA500)
+            LogEntry.Level.E -> Color(0x33FF3030)
+        }

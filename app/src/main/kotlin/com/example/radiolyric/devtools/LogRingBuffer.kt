@@ -9,8 +9,8 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * Bounded ring buffer of [LogEntry] with a [StateFlow] view for Compose consumers.
  *
- * Thread-safe via a single [ReentrantLock]. Capacity is fixed at construction time. When the
- * buffer is full, the oldest entry is evicted to make room for the newest.
+ * Thread-safe via a single [ReentrantLock]. Capacity is fixed at construction time. When the buffer
+ * is full, the oldest entry is evicted to make room for the newest.
  *
  * This class is JVM-only on purpose so it can be unit-tested without Robolectric.
  */

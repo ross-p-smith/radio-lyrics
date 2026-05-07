@@ -80,9 +80,7 @@ fun AppNavigation() {
                             onOpenStations = { navController.navigate(Routes.STATIONS) },
                     )
                 }
-                composable(Routes.LYRICS) {
-                    LyricsScreen(modifier = Modifier.fillMaxSize())
-                }
+                composable(Routes.LYRICS) { LyricsScreen(modifier = Modifier.fillMaxSize()) }
                 composable(Routes.STATIONS) {
                     StationPickerScreen(modifier = Modifier.fillMaxSize())
                 }

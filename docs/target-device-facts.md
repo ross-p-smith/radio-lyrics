@@ -162,18 +162,18 @@ other shell tooling is enumerating `/sys/bus/usb`.
 
 #### 2026-05-06/07 — power-up acknowledge byte fix (LANDED)
 
-Submodule commit `2470c04` *"Fix wRadio C100 power-up by draining setRegister
-acknowledge byte"* on branch `radio-lyric` of the `omri-usb` fork is what
+Submodule commit `2470c04` _"Fix wRadio C100 power-up by draining setRegister
+acknowledge byte"_ on branch `radio-lyric` of the `omri-usb` fork is what
 actually unblocked the bring-up past `TUNER_STATUS_INITIALIZED`. After this
 commit the captured signal counts across the three logs in
 [.copilot-tracking/logs/2026-05-06/](../.copilot-tracking/logs/2026-05-06/)
 are:
 
-| Log | `Found Siano` | `TUNER_STATUS` | `PowerUp` | `usbfs` |
-| --- | --- | --- | --- | --- |
-| `pre-WI05-fg-timeout.log` | 1 | 1 | 1 | 0 |
-| `post-WI05-with-dabz-conflict.log` | 1 | 3 | 1 | 0 |
-| `post-WI05-no-dabz.log` | 1 | 2 | 1 | 0 |
+| Log                                | `Found Siano` | `TUNER_STATUS` | `PowerUp` | `usbfs` |
+| ---------------------------------- | ------------- | -------------- | --------- | ------- |
+| `pre-WI05-fg-timeout.log`          | 1             | 1              | 1         | 0       |
+| `post-WI05-with-dabz-conflict.log` | 1             | 3              | 1         | 0       |
+| `post-WI05-no-dabz.log`            | 1             | 2              | 1         | 0       |
 
 Driver reaches INITIALIZED. No `bulkTransfer` payload-level activity captured
 yet — the next stall site is somewhere between INITIALIZED and audio frames

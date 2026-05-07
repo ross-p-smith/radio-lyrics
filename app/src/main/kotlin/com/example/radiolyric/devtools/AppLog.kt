@@ -4,14 +4,14 @@ import android.util.Log
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Drop-in replacement for [android.util.Log] that ALSO mirrors every emission into a bounded
- * ring buffer for the in-app `DevLogScreen` (debug builds only).
+ * Drop-in replacement for [android.util.Log] that ALSO mirrors every emission into a bounded ring
+ * buffer for the in-app `DevLogScreen` (debug builds only).
  *
- * Signature parity with `android.util.Log` is intentional so call-site migration is a pure
- * import swap. Behaviour:
+ * Signature parity with `android.util.Log` is intentional so call-site migration is a pure import
+ * swap. Behaviour:
  * - Always forwards to `android.util.Log.{d,i,w,e}` (so `adb logcat` still works).
- * - Always appends a [LogEntry] to the ring buffer (release builds keep the buffer too — it's
- *   small and harmless; the screen consuming it is debug-only).
+ * - Always appends a [LogEntry] to the ring buffer (release builds keep the buffer too — it's small
+ * and harmless; the screen consuming it is debug-only).
  *
  * Use [recent] from Compose with `collectAsStateWithLifecycle()`.
  */

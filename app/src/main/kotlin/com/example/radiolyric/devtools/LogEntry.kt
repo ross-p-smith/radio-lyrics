@@ -8,5 +8,10 @@ data class LogEntry(
         val message: String,
         val throwable: String? = null,
 ) {
-    enum class Level { D, I, W, E }
+    enum class Level {
+        D,
+        I,
+        W,
+        E
+    }
 }

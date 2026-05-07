@@ -24,7 +24,9 @@ class BootReceiver : BroadcastReceiver() {
         val action = intent?.action ?: return
         Log.i(TAG, "Autostart trigger: $action")
         val svc =
-                Intent(context, PlaybackService::class.java).apply { putExtra(EXTRA_TRIGGER, action) }
+                Intent(context, PlaybackService::class.java).apply {
+                    putExtra(EXTRA_TRIGGER, action)
+                }
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 ContextCompat.startForegroundService(context, svc)
@@ -42,8 +44,8 @@ class BootReceiver : BroadcastReceiver() {
         private const val TAG = "BootReceiver"
 
         /**
-         * Extra carrying the originating broadcast action so [PlaybackService] can
-         * record telemetry / trigger source for diagnostics.
+         * Extra carrying the originating broadcast action so [PlaybackService] can record telemetry
+         * / trigger source for diagnostics.
          */
         const val EXTRA_TRIGGER: String = "trigger"
     }
