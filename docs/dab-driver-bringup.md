@@ -49,10 +49,10 @@ fork) drained the ack byte explicitly. That was the missing piece.
 Cherry-picked the 10-line ack-drain from `flohoff/wradio-c100` into our
 `omri-usb` fork.
 
-* **File**: `omri-usb/omriusb/src/main/cpp/platformspecific/android/raontunerinput.cpp`
-* **Function**: `RaonTunerInput::setRegister` (~line 432)
-* **Diff size**: `+10 lines, 0 deletions`
-* **Mechanism**: After the existing
+- **File**: `omri-usb/omriusb/src/main/cpp/platformspecific/android/raontunerinput.cpp`
+- **Function**: `RaonTunerInput::setRegister` (~line 432)
+- **Diff size**: `+10 lines, 0 deletions`
+- **Mechanism**: After the existing
   `writeBulkTransferData(RAON_ENDPOINT_OUT, setRegData)`, issue a
   one-byte `readBulkTransferData(RAON_ENDPOINT_IN, ackBuffer)` to drain the
   per-write `0xA1` acknowledge.
@@ -87,13 +87,13 @@ We reconstructed the same fast path inside our `omri-usb` fork.
 
 ### What landed
 
-| File                                                                                            | Change                                                                                          |
-| ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `omri-usb/omriusb/src/main/cpp/platformspecific/android/jusbdevice.h`                           | Class declaration: adds `m_directBulkEnabled`, cached `m_fd`, ioctl method declarations, public setter. |
-| `omri-usb/omriusb/src/main/cpp/platformspecific/android/jusbdevice.cpp`                         | Class definition: binds `getFileDescriptor()` method ID, caches FD in `permissionGranted`, adds ioctl read/write variants, branches in existing read/write methods. |
-| `omri-usb/omriusb/src/main/cpp/platformspecific/android/native-lib.cpp`                         | JNI registry: adds `Java_org_omri_radio_impl_UsbHelper_setDirectBulkTransferEnabled` shim.       |
-| `omri-usb/omriusb/src/main/java/org/omri/radio/impl/UsbHelper.java`                             | Java side: declares `private native void setDirectBulkTransferEnabled` + `setDirectBulkTransferModeEnabled` package-private wrapper. |
-| `omri-usb/omriusb/src/main/java/org/omri/radio/impl/TunerUsbImpl.java`                          | Calls the wrapper before `initializeTuner()` so the fast path is live for the very first FIC poll. |
+| File                                                                    | Change                                                                                                                                                              |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `omri-usb/omriusb/src/main/cpp/platformspecific/android/jusbdevice.h`   | Class declaration: adds `m_directBulkEnabled`, cached `m_fd`, ioctl method declarations, public setter.                                                             |
+| `omri-usb/omriusb/src/main/cpp/platformspecific/android/jusbdevice.cpp` | Class definition: binds `getFileDescriptor()` method ID, caches FD in `permissionGranted`, adds ioctl read/write variants, branches in existing read/write methods. |
+| `omri-usb/omriusb/src/main/cpp/platformspecific/android/native-lib.cpp` | JNI registry: adds `Java_org_omri_radio_impl_UsbHelper_setDirectBulkTransferEnabled` shim.                                                                          |
+| `omri-usb/omriusb/src/main/java/org/omri/radio/impl/UsbHelper.java`     | Java side: declares `private native void setDirectBulkTransferEnabled` + `setDirectBulkTransferModeEnabled` package-private wrapper.                                |
+| `omri-usb/omriusb/src/main/java/org/omri/radio/impl/TunerUsbImpl.java`  | Calls the wrapper before `initializeTuner()` so the fast path is live for the very first FIC poll.                                                                  |
 
 ### Default state
 
@@ -110,9 +110,9 @@ that this app does not consume. Leaving it in the AAR meant the public
 surface advertised capabilities the app did not deliver, and the dead code
 made future audits harder. The removal pass:
 
-* Deleted six implementation files (`TunerIpShoutcast` and friends) in
+- Deleted six implementation files (`TunerIpShoutcast` and friends) in
   commit `d103ebc`.
-* Cleaned up the residue in commit `899799d`: 3 public enum constants
+- Cleaned up the residue in commit `899799d`: 3 public enum constants
   (`TUNER_TYPE_IP_SHOUTCAST`, `RADIOSERVICE_TYPE_IP`,
   `METADATA_TEXTUAL_TYPE_ICY_TEXT`), 5 orphan public types
   (`RadioServiceIp`, `RadioServiceIpStream`, `TextualIpIcy`,
@@ -131,24 +131,24 @@ IP/Shoutcast and are still in scope for `omri-usb`.
 
 ## 6. Verification status
 
-| Check                                                                                                                            | Status                                              |
-| -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| `./gradlew :omri-usb:compileDebugJavaWithJavac`                                                                                  | **BUILD SUCCESSFUL** (verified 2026-05-07)          |
-| `./gradlew :app:assembleDebug`                                                                                                   | **BUILD SUCCESSFUL** (verified 2026-05-07)          |
-| Permission grant + `openDevice` on DUDU7 (Android 13)                                                                            | **Verified** in upstream-PR research logcat         |
-| `Found Siano device!` → `PowerUp okay!` → `Starting service scan!`                                                               | **Verified** by Phase 2B logcat (2026-05-06)        |
-| 11 ensemble transitions across UK band-III plan                                                                                  | **Verified** by Phase 2B logcat (2026-05-06)        |
-| `LockStat: 1` on at least one ensemble                                                                                           | **Pending** — needs DAB band-III RF coverage (HW-V4) |
-| Live audio render (`pcmAudioData → OmriUsbRadioSource._audio → RadioPlayer → MediaSession`)                                      | **Pending** — gated on `LockStat: 1` (HW-V4)        |
-| Direct-bulk-transfer fast path measurable latency reduction                                                                      | **Pending** — instrumentation deferred (WI-DBT-04)  |
+| Check                                                                                       | Status                                               |
+| ------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `./gradlew :omri-usb:compileDebugJavaWithJavac`                                             | **BUILD SUCCESSFUL** (verified 2026-05-07)           |
+| `./gradlew :app:assembleDebug`                                                              | **BUILD SUCCESSFUL** (verified 2026-05-07)           |
+| Permission grant + `openDevice` on DUDU7 (Android 13)                                       | **Verified** in upstream-PR research logcat          |
+| `Found Siano device!` → `PowerUp okay!` → `Starting service scan!`                          | **Verified** by Phase 2B logcat (2026-05-06)         |
+| 11 ensemble transitions across UK band-III plan                                             | **Verified** by Phase 2B logcat (2026-05-06)         |
+| `LockStat: 1` on at least one ensemble                                                      | **Pending** — needs DAB band-III RF coverage (HW-V4) |
+| Live audio render (`pcmAudioData → OmriUsbRadioSource._audio → RadioPlayer → MediaSession`) | **Pending** — gated on `LockStat: 1` (HW-V4)         |
+| Direct-bulk-transfer fast path measurable latency reduction                                 | **Pending** — instrumentation deferred (WI-DBT-04)   |
 
 ## 7. Cross-references
 
-* `.copilot-tracking/research/2026-05-06/omri-usb-wradio-c100-bringup-research.md` — full research feeding Fix #1.
-* `.copilot-tracking/plans/logs/2026-05-06/omri-usb-wradio-c100-bringup-log.md` — Phase 2B outcome with the verbatim logcat block.
-* `.copilot-tracking/research/2026-05-06/wradio-c100-direct-bulk-transfer-research.md` — research feeding Fix #2.
-* `.copilot-tracking/plans/2026-05-06/wradio-c100-direct-bulk-transfer-plan.instructions.md` — implementation plan for Fix #2.
-* `.copilot-tracking/research/2026-05-07/irt-ip-shoutcast-cleanup-research.md` — research feeding Fix #3 (full residue inventory).
-* `.copilot-tracking/plans/2026-05-07/irt-ip-shoutcast-cleanup-plan.instructions.md` — implementation plan for Fix #3.
-* `docs/project-status.md` — current overall status; lists hardware-blocked items HW-V3/HW-V4 referenced above.
-* `docs/target-device-facts.md` — authoritative live-captured facts about the DUDU7 (Android 13, UNISOC UMS9620, SDK 33).
+- `.copilot-tracking/research/2026-05-06/omri-usb-wradio-c100-bringup-research.md` — full research feeding Fix #1.
+- `.copilot-tracking/plans/logs/2026-05-06/omri-usb-wradio-c100-bringup-log.md` — Phase 2B outcome with the verbatim logcat block.
+- `.copilot-tracking/research/2026-05-06/wradio-c100-direct-bulk-transfer-research.md` — research feeding Fix #2.
+- `.copilot-tracking/plans/2026-05-06/wradio-c100-direct-bulk-transfer-plan.instructions.md` — implementation plan for Fix #2.
+- `.copilot-tracking/research/2026-05-07/irt-ip-shoutcast-cleanup-research.md` — research feeding Fix #3 (full residue inventory).
+- `.copilot-tracking/plans/2026-05-07/irt-ip-shoutcast-cleanup-plan.instructions.md` — implementation plan for Fix #3.
+- `docs/project-status.md` — current overall status; lists hardware-blocked items HW-V3/HW-V4 referenced above.
+- `docs/target-device-facts.md` — authoritative live-captured facts about the DUDU7 (Android 13, UNISOC UMS9620, SDK 33).

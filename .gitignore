@@ -6,5 +6,6 @@ local.properties
 captures/
 .cxx/
 .kotlin/
+.copilot-tracking/
 vendor-apks/
 app/src/debug/assets/fixtures/
