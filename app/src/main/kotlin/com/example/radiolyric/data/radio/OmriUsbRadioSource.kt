@@ -1,7 +1,7 @@
 package com.example.radiolyric.data.radio
 
 import android.content.Context
-import android.util.Log
+import com.example.radiolyric.devtools.AppLog as Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Instant
 import javax.inject.Inject
@@ -208,6 +208,14 @@ constructor(
                                                 "No USB DAB tuner found — is the Mekede dongle attached and USB permission granted?",
                                         )
                         t.subscribe(tunerListener)
+                        // Cherry-picked from DAB-Z (com.zoulou.dab 2.0.239) C0/t.java:96-100.
+                        // Switches JUsbDevice to the USBDEVFS_BULK ioctl path so the FIC
+                        // reader keeps up with the wRadio C100; without this, LockStat
+                        // never reaches 1 on the DUDU7. Must be called before
+                        // initializeTuner() so the very first FIC poll uses the fast path.
+                        // See .copilot-tracking/research/2026-05-06/dabz-vs-omriusb-lock-research.md
+                        // Section 6.
+                        (t as? org.omri.radio.impl.TunerUsbImpl)?.setDirectBulkTransferModeEnabled(true)
                         t.initializeTuner()
                         // Wait up to 10 s for TUNER_STATUS_INITIALIZED (reset for each open).
                         val ok =

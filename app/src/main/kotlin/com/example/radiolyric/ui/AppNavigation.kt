@@ -29,13 +29,14 @@ private object Routes {
     const val STATIONS = "stations"
 }
 
-private data class NavItem(val route: String, val label: String, val icon: ImageVector)
+/** Bottom-bar item descriptor. Public so the debug source set can construct one. */
+data class NavItemSpec(val route: String, val label: String, val icon: ImageVector)
 
 private val NavItems =
         listOf(
-                NavItem(Routes.NOW_PLAYING, "Now Playing", Icons.Filled.MusicNote),
-                NavItem(Routes.LYRICS, "Lyrics", Icons.Filled.Subtitles),
-                NavItem(Routes.STATIONS, "Stations", Icons.Filled.LibraryMusic),
+                NavItemSpec(Routes.NOW_PLAYING, "Now Playing", Icons.Filled.MusicNote),
+                NavItemSpec(Routes.LYRICS, "Lyrics", Icons.Filled.Subtitles),
+                NavItemSpec(Routes.STATIONS, "Stations", Icons.Filled.LibraryMusic),
         )
 
 @Composable
@@ -46,7 +47,7 @@ fun AppNavigation() {
                 NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                     val backStack by navController.currentBackStackEntryAsState()
                     val current = backStack?.destination
-                    NavItems.forEach { item ->
+                    (NavItems + debugNavItems()).forEach { item ->
                         NavigationBarItem(
                                 selected =
                                         current?.hierarchy?.any { it.route == item.route } == true,
@@ -85,6 +86,7 @@ fun AppNavigation() {
                 composable(Routes.STATIONS) {
                     StationPickerScreen(modifier = Modifier.fillMaxSize())
                 }
+                installDebugRoutes(navController)
             }
             // innerPadding is consumed by the Scaffold; no extra inset needed in MVP since each
             // screen handles its own padding.

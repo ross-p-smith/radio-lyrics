@@ -34,6 +34,21 @@ Requires JDK 17+, Android SDK with `compileSdk=35`, NDK `27.0.12077973`.
 adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
+## Developer commands
+
+A top-level `Makefile` consolidates the common adb / Gradle commands used
+during on-device iteration. Run `make help` for the full list. The device IP
+is configurable via `DEVICE_IP` (default `192.168.1.54`):
+
+```bash
+make help                              # list all targets
+make connect DEVICE_IP=192.168.1.54    # adb connect to head unit
+make install                           # build + install debug APK (real radio)
+make install-fake                      # debug APK with FakeRadioSource
+make logs                              # filtered logcat tail
+make stop-dabz                         # release USB dongle from DAB-Z
+```
+
 ## Autostart setup
 
 The app registers a [BootReceiver](app/src/main/kotlin/com/example/radiolyric/autostart/BootReceiver.kt)

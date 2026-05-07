@@ -5,6 +5,7 @@ set -euo pipefail
 java -version
 sdkmanager --version || true
 adb version
+gh --version || true
 
 # Pre-warm Gradle wrapper if it exists
 if [[ -x ./gradlew ]]; then
@@ -25,4 +26,7 @@ Build & install the debug APK:
 
 Run JVM unit tests (no device required):
     ./gradlew test
+
+Authenticate the GitHub CLI (one-time, persists in the container volume):
+    gh auth login
 EOF

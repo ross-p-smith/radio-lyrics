@@ -9,12 +9,14 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 /**
- * Shared binding: whatever the active flavor binds to [RealRadioSourceProvider] is exposed as the
- * application's [RadioSource].
+ * Shared binding: whatever the active source set binds to [RealRadioSourceProvider] is exposed
+ * as the application's [RadioSource].
  *
  * The concrete `Provider -> Implementation` binding lives in:
- * - `app/src/debug/.../di/DebugRadioBindings.kt` (FakeRadioSource)
- * - `app/src/release/.../di/ReleaseRadioBindings.kt` (OmriUsbRadioSourceStub / OmriUsbRadioSource)
+ * - `app/src/debug/.../di/DebugRadioBindings.kt` — chooser between `OmriUsbRadioSource` (default)
+ *   and `FakeRadioSource`, selected at build time via the `radio.source` Gradle property
+ *   (`BuildConfig.RADIO_SOURCE`).
+ * - `app/src/release/.../di/ReleaseRadioBindings.kt` — `OmriUsbRadioSource`.
  */
 @Module
 @InstallIn(SingletonComponent::class)

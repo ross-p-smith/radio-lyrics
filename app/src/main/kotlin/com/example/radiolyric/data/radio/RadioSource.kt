@@ -7,12 +7,13 @@ import kotlinx.coroutines.flow.StateFlow
  * Abstraction over the DAB radio backend.
  *
  * Implementations:
+ * - `OmriUsbRadioSource` (main source set): drives the Mekede USB tuner via the vendored
+ *   `omri-usb` library. Used by release builds and by debug builds by default.
  * - `FakeRadioSource` (debug source set): emits a scripted timeline against bundled fixtures.
- * - `OmriUsbRadioSource` (release source set, Phase 4): drives the Mekede USB tuner via the
- * vendored `omri-usb` library.
+ *   Selected by debug builds when `-Pradio.source=fake` is passed at build time.
  *
  * This contract is intentionally pure-Kotlin (no Android, no `omri-usb`) so it can be unit-tested
- * on the JVM and so the flavor split is enforced at compile time.
+ * on the JVM and so the variant split is enforced at compile time.
  */
 interface RadioSource {
     /** Tuner lifecycle state. Hot — replays the latest value to new collectors. */

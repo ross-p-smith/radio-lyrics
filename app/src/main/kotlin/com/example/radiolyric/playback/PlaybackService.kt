@@ -1,8 +1,10 @@
 package com.example.radiolyric.playback
 
 import android.content.Intent
-import android.util.Log
+import android.content.pm.ServiceInfo
+import android.os.Build
 import androidx.media3.common.util.UnstableApi
+import com.example.radiolyric.devtools.AppLog as Log
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.example.radiolyric.data.radio.RadioSource
@@ -60,10 +62,7 @@ class PlaybackService : MediaSessionService() {
                             if (wantsPlay) audioPump.resume() else audioPump.pause()
                         },
                 )
-        session =
-                MediaSession.Builder(this, player)
-                        .setId("radio-lyric-session")
-                        .build()
+        session = MediaSession.Builder(this, player).setId("radio-lyric-session").build()
 
         startCollectingMetadata()
         startCollectingAudio()
@@ -71,13 +70,28 @@ class PlaybackService : MediaSessionService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
+        // WI-05: Android 13+ kills any service started via startForegroundService() that does not
+        // call startForeground() within ~10s. Tuner open() + tune() can comfortably run longer
+        // than that (full DAB band-III scan is ~2 minutes), so we publish a placeholder
+        // "Preparing…" notification immediately. Media3's DefaultMediaNotificationProvider will
+        // replace it with the real now-playing notification once the MediaSession goes active.
+        val preparing = PlaybackNotification.buildPreparing(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                    PlaybackNotification.FOREGROUND_NOTIFICATION_ID,
+                    preparing,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
+            )
+        } else {
+            startForeground(PlaybackNotification.FOREGROUND_NOTIFICATION_ID, preparing)
+        }
         if (!openInProgress && session != null) {
             openInProgress = true
             scope.launch {
                 runCatching {
-                            radioSource.open().getOrThrow()
-                            radioSource.tune(Stations.HeartUK).getOrThrow()
-                        }
+                    radioSource.open().getOrThrow()
+                    radioSource.tune(Stations.HeartUK).getOrThrow()
+                }
                         .onFailure { Log.w(TAG, "Initial tune failed", it) }
                 openInProgress = false
             }
@@ -120,7 +134,8 @@ class PlaybackService : MediaSessionService() {
         metaJob =
                 scope.launch {
                     @OptIn(kotlinx.coroutines.FlowPreview::class)
-                    radioSource.nowPlaying
+                    radioSource
+                            .nowPlaying
                             .distinctUntilChangedBy { it.artist to it.title }
                             .debounce(METADATA_DEBOUNCE_MS)
                             .collectLatest { np ->

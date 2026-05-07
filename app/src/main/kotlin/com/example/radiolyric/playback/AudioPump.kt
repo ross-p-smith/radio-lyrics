@@ -4,7 +4,7 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
-import android.util.Log
+import com.example.radiolyric.devtools.AppLog as Log
 
 /**
  * Thin wrapper around [AudioTrack] for streaming S16_LE stereo PCM @ 48 kHz.

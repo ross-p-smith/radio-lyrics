@@ -1,13 +1,14 @@
 package com.example.radiolyric.data.radio
 
 /**
- * Marker interface used by the Hilt graph to bind a concrete [RadioSource] per build flavor.
+ * Marker interface used by the Hilt graph to bind a concrete [RadioSource] per build variant.
  *
- * - `debug` source set binds `FakeRadioSource` to this type.
- * - `release` source set binds `OmriUsbRadioSourceStub` (Phase 3) / `OmriUsbRadioSource` (Phase 4).
+ * - `debug` source set provides this via a chooser keyed on `BuildConfig.RADIO_SOURCE`
+ *   (`OmriUsbRadioSource` by default, `FakeRadioSource` when `-Pradio.source=fake`).
+ * - `release` source set binds `OmriUsbRadioSource`.
  *
- * Keeping the variant binding behind this marker lets the shared `RadioModule` in main do `@Binds
- * RealRadioSourceProvider -> RadioSource` exactly once, while each source set owns its own `@Binds
- * Concrete -> RealRadioSourceProvider`.
+ * Keeping the variant binding behind this marker lets the shared `RadioModule` in main do
+ * `@Binds RealRadioSourceProvider -> RadioSource` exactly once, while each source set owns its
+ * own concrete provider.
  */
 interface RealRadioSourceProvider : RadioSource

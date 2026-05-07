@@ -57,6 +57,15 @@ android {
             manifestPlaceholders[key] =
                     if (includeFolklore) action else "com.example.radiolyric.disabled.acc${index + 1}"
         }
+
+        // Debug-only chooser between OmriUsbRadioSource and FakeRadioSource. Default `real` keeps
+        // on-device hardware iteration friction-free; pass `-Pradio.source=fake` for hardware-free
+        // builds. See app/src/debug/.../di/DebugRadioBindings.kt for how this is consumed.
+        val radioSource = (project.findProperty("radio.source") as? String ?: "real").lowercase()
+        require(radioSource in setOf("real", "fake")) {
+            "radio.source must be 'real' or 'fake' (got: '$radioSource')"
+        }
+        buildConfigField("String", "RADIO_SOURCE", "\"$radioSource\"")
     }
 
     sourceSets {
