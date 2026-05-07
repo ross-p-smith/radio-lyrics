@@ -90,6 +90,13 @@ constructor(
     private val tunerInitDone = CompletableDeferred<Boolean>().protect()
     private var scanDone: CompletableDeferred<Unit>? = null
 
+    /**
+     * Station the in-flight `startRadioServiceScan` is hunting for. When the matching service
+     * appears in [TunerListener.tunerScanServiceFound] we stop the scan early instead of
+     * waiting for the full Band III sweep (~120 s) to finish.
+     */
+    @Volatile private var pendingScanTarget: Station? = null
+
     private val tunerListener =
             object : TunerListener {
                 override fun tunerStatusChanged(t: Tuner, newStatus: TunerStatus) {
@@ -118,6 +125,18 @@ constructor(
                 override fun tunerScanServiceFound(t: Tuner, foundService: RadioService) {
                     if (DEBUG)
                             Log.d(TAG, "tunerScanServiceFound: ${foundService.serviceLabel}")
+                    val target = pendingScanTarget ?: return
+                    if (foundService is RadioServiceDab &&
+                                    foundService.serviceId == target.sid &&
+                                    foundService.ensembleId == target.eid
+                    ) {
+                        Log.d(
+                                TAG,
+                                "Target service found mid-scan (SId=0x${target.sid.toString(16)} EId=0x${target.eid.toString(16)}); stopping scan early",
+                        )
+                        runCatching { t.stopRadioServiceScan() }
+                        scanDone?.completeIfActive(Unit)
+                    }
                 }
 
                 override fun radioServiceStarted(t: Tuner, started: RadioService) {
@@ -254,13 +273,20 @@ constructor(
                     if (match == null) {
                         val done = CompletableDeferred<Unit>().protect()
                         scanDone = done
-                        t.startRadioServiceScan()
-                        withTimeoutOrNull(SCAN_TIMEOUT_MS) { done.await() }
-                                ?: run {
-                                    runCatching { t.stopRadioServiceScan() }
-                                    error("Service scan did not finish within ${SCAN_TIMEOUT_MS}ms")
-                                }
-                        scanDone = null
+                        pendingScanTarget = station
+                        try {
+                            t.startRadioServiceScan()
+                            withTimeoutOrNull(SCAN_TIMEOUT_MS) { done.await() }
+                                    ?: run {
+                                        runCatching { t.stopRadioServiceScan() }
+                                        error(
+                                                "Service scan did not finish within ${SCAN_TIMEOUT_MS}ms",
+                                        )
+                                    }
+                        } finally {
+                            scanDone = null
+                            pendingScanTarget = null
+                        }
                         match = findMatchingService(t, station)
                     }
                     val service =
@@ -313,6 +339,9 @@ constructor(
         private const val TAG = "OmriUsbRadioSource"
         private const val DEBUG = false
         private const val TUNER_INIT_TIMEOUT_MS = 10_000L
-        private const val SCAN_TIMEOUT_MS = 30_000L
+        // Worst-case fallback when the requested ensemble is off-air: a full Band III sweep
+        // on the Raon dongle takes ~90-120 s. We normally exit early via
+        // tunerScanServiceFound as soon as the requested SId/EId is locked.
+        private const val SCAN_TIMEOUT_MS = 120_000L
     }
 }

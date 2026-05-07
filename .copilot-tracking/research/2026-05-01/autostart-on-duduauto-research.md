@@ -37,18 +37,220 @@ Make the Android DAB+ radio + live lyrics app launch automatically every time th
 6. USB race: do not assume `USB_DEVICE_ATTACHED` fires at boot for an already-connected dongle. Snapshot `UsbManager.deviceList`, register a runtime attach receiver, schedule a 12 s delayed retry to cover the wake-from-deep-sleep re-enumeration delay.
 7. Verification path: ADB commands to simulate each broadcast, watch the actual broadcast queue during a real key cycle, and confirm the app is not in `stopped` state.
 
-## Potential Next Research
+## Confirmed Firmware Fingerprint (2026-05-02 ADB capture)
 
-* Pull a real `dumpsys activity broadcasts` from the user's live DUDU7 across a key cycle to enumerate the ACTUAL OEM intents fired.
-  * Reasoning: The folklore list (`com.xy.power.ACC_ON`, `com.mtcd.action.ACC_ON`, `com.wits.ACC_ON`) returned zero hits in primary-source search. We include them defensively but should confirm what DUDU OS truly broadcasts.
-  * Reference: `.copilot-tracking/research/subagents/2026-05-01/headunit-autostart-research.md`, §2 and §8.
-* Decompile the DUDU `Tasks` app to find the actual "Vehicle Ignition" trigger broadcast.
-  * Reasoning: If we can listen for that intent directly, we can drop the manual Tasks-app configuration step.
-* Confirm whether the `Canbus → Startup Settings → Select app to auto start on bootup` picker lists our app once it has a `MAIN`/`LAUNCHER` activity.
-  * Reasoning: Forum user `dogsfoot` reports Carlink 2.0 is missing from the picker, suggesting a hidden filter (possibly category-based).
-  * Reference: `forum.dudu-auto.com/d/482` post #4.
-* Confirm DUDU7 firmware build on the user's unit (`Settings → About → long-press top-left of the picture` produces the system-info screenshot per `forum.dudu-auto.com/d/787`).
-  * Reasoning: Determines whether `Canbus → Startup Settings`, `Tasks`, or both are present.
+Captured live from the user's unit via `adb shell getprop`:
+
+* `ro.build.fingerprint` = `UNISOC/uis7870sc_2h10_nosec/uis7870sc_2h10:13/TP1A.220624.014/ls08211712:user/release-keys`
+* `ro.product.build.version.incremental` = `duduauto.ttrnf.20250905.155128`  (Duduauto vendor tag)
+* `ro.build.version.release` = **13** / SDK **33** / `ro.product.first_api_level` = 33
+* `ro.product.cpu.abi` = `arm64-v8a` (abilist: arm64-v8a, armeabi-v7a, armeabi)
+* SoC / board: **Unisoc UIS7870SC_2H10** (matches our research assumption — confirms the radio research too)
+* `ro.build.ab_update` = `true` (A/B partitions; safer OTA, irrelevant to autostart)
+* `ro.build.security_patch` = `2023-03-05` (older — note for any TLS / cert-store concerns later)
+* **`ro.build.fytid` = `FYGrp01`** ⇒ This is **FYT-based firmware** (FYT Group 01), not pure DUDU OS.
+* **`ro.build.fytmanufacturer` = `131`** ⇒ FYT manufacturer code 131 (Duduauto's FYT vendor ID).
+* **`ro.build.go_lasttop` = `false`** ⇒ FYT "auto-resume last media app on wake" is currently **disabled** on this unit.
+* `ro.build.fytinputmethod` = `com.google.android.inputmethod.latin/...` (further FYT confirmation)
+
+### Implications
+
+1. **FYT autostart paths are now in play, not just DUDU paths.** This unit is a FYT/Duduauto hybrid (FYT base firmware, Duduauto vehicle-integration layer). Both the DUDU `Canbus → Startup Settings` picker AND the FYT `com.fyt.boot.ACCON` broadcast / "last media app" trick should be tested as the primary autostart strategy.
+2. **`ro.build.go_lasttop=false`** disables the FYT auto-resume feature today. Two options:
+   * Flip it via `setprop ro.build.go_lasttop true` (not persistent) or build.prop edit (root needed) — ELEGANT but invasive.
+   * Add our package to `assets/property/player_app.txt` inside `com.syu.ms.apk` (the FYT MediaService) — also invasive.
+   * **Preferred**: ignore the FYT auto-resume trick entirely on this unit and stick with the DUDU Canbus picker + `BOOT_COMPLETED` receiver. The FYT trick is documented but only useful when the picker is absent.
+3. **Android 13 / SDK 33** confirms our manifest must use `foregroundServiceType="mediaPlayback"` + `FOREGROUND_SERVICE_MEDIA_PLAYBACK` permission, and `minSdk` for autostart code does not need any pre-O accommodations. Implicit-broadcast restrictions (Android 8+) DO apply, so `BOOT_COMPLETED`, `LOCKED_BOOT_COMPLETED`, and `MY_PACKAGE_REPLACED` remain the only manifest-declared boot intents that are exempt.
+4. **`com.fyt.boot.ACCON` is documented as Android-7-and-below only** (HeadUnit Revived gist). On this Android 13 build it is likely blocked by implicit-broadcast restriction unless the FYT firmware ships a special exemption — needs live `dumpsys activity broadcasts` capture to confirm.
+5. **arm64 + armeabi-v7a present** — the `omri-usb` JNI build must include both `arm64-v8a` and `armeabi-v7a` ABIs. (Already noted in the radio research; this confirms it.)
+
+## Confirmed Vendor App Inventory (2026-05-02 ADB capture)
+
+`adb shell pm list packages | grep -iE 'dudu|task|canbus|mcu'`:
+
+| Package                                 | Role on this unit                                                                 |
+|-----------------------------------------|-----------------------------------------------------------------------------------|
+| `com.dudu.autoui`                       | **DUDU launcher / SystemUI shell** — owns the home screen, dock, and very likely the `Settings → Canbus → Startup Settings` and `Settings → More features → Tasks` UIs. Replaces both the FYT default launcher and the OEM Tasks app. |
+| `com.dudu.autoui.theme.cyb` / `.chaoyue1` / `.hwbgb` / `.hwbgh` | Theme packs for `com.dudu.autoui`. Confirms `com.dudu.autoui` is the active launcher. |
+| `com.syu.canbus`                        | **FYT Canbus service** (SYU = FYT internal vendor namespace) — handles vehicle bus → Android intent translation. This is almost certainly the source of the "Vehicle Ignition" trigger broadcast that DUDU's Tasks UI listens for. |
+| `com.syu.mcukey`                        | **FYT MCU key handler** — steering-wheel + hardware-key events from the MCU. Sibling of `com.syu.canbus`. |
+| `com.duduos.ota_update`                 | DUDU OTA updater — irrelevant to autostart.                                       |
+| `com.dudu.btmusic`                      | DUDU Bluetooth music app.                                                         |
+| `com.wow.fyt7862.duduos_market`         | DUDU app store (note `fyt7862` in the package — further FYT confirmation; vendor brands this firmware as "FYT 7862" despite the SoC actually being UIS7870). |
+| `com.wow.fyt7862.duduos_carui`          | Vendor "carui" widget collection.                                                 |
+| `com.dudu.wiki`                         | Help app.                                                                         |
+
+### Key inferences from the inventory
+
+1. **`com.dudu.autoui` is the launcher AND the Tasks/Canbus settings host.** No standalone `com.dudu.tasks` package exists — confirms our research that the Tasks feature is a sub-UI of the DUDU launcher itself. To find the "Vehicle Ignition" broadcast string we should `adb pull` `com.dudu.autoui`, not a separate Tasks APK.
+2. **`com.syu.canbus` is the actual broadcaster of vehicle-bus events.** This is the high-value target: decompiling its `AndroidManifest.xml` and string table will reveal the exact ACC-on / vehicle-ignition action strings. Likely candidates given FYT lineage: `com.syu.action.ACC_ON`, `com.syu.canbus.ACC_ON`, or generic `com.syu.power.*`.
+3. **No `com.syu.ms` (FYT MediaService) was returned.** Either it isn't installed on this DUDU build (DUDU has replaced FYT's media stack with `com.dudu.btmusic` + their own player inside `com.dudu.autoui`), or it's namespaced differently. This **confirms** the recommendation to ignore the FYT auto-resume trick on this unit.
+4. **No standalone Carlink / AA package matched our grep**, but Tasks/Canbus do — so the Canbus picker IS present on this firmware. The picker should list us once we declare a standard `MAIN`/`LAUNCHER` activity.
+5. **`fyt7862` in two package names** confirms the "FYT 7862" firmware family even though the actual SoC is UIS7870 — Duduauto rebranded the FYT 7862-class firmware for their UIS7870 boards. All FYT-family broadcasts and conventions apply.
+
+### Updated next ADB commands (in priority order)
+
+```bash
+# Pull the DUDU launcher to find the Tasks "Vehicle Ignition" broadcast
+adb shell pm path com.dudu.autoui
+adb pull <returned-path> ./vendor-apks/com.dudu.autoui.apk
+
+# Pull the FYT Canbus service to find the actual ACC broadcast string
+adb shell pm path com.syu.canbus
+adb pull <returned-path> ./vendor-apks/com.syu.canbus.apk
+
+# Then statically inspect (host side):
+#   apkanalyzer manifest print ./vendor-apks/com.syu.canbus.apk
+#   apkanalyzer dex strings  ./vendor-apks/com.syu.canbus.apk | grep -iE 'acc|ignition|wake|boot|power'
+
+# Check FYT/DUDU no-kill whitelist
+adb shell ls -la /system/etc/ /vendor/etc/ 2>/dev/null | grep -iE 'whitelist|pwctl|noclean|persist|fyt|syu'
+adb shell cat /system/etc/pwctl_config.xml 2>/dev/null
+```
+
+## Confirmed `pwctl_config.xml` Contents (2026-05-02 ADB capture)
+
+Two copies exist on the unit:
+
+* `/vendor/etc/pwctl_config.xml` (the one the FYT power-control daemon reads)
+* `/odm/app/pwctl_config.xml` (ODM-layer copy — same contents, used as fallback)
+
+Contents (203 bytes, both files identical):
+
+```xml
+<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<config>
+<item name="LaunchBlackList">
+</item>
+<!--
+<item name='FlingApp'>
+    <packageName>com.tencent.mm</packageName>
+</item>
+-->
+</config>
+```
+
+### What this tells us — three decisive findings
+
+1. **The firmware uses a launch DENYLIST, not an allowlist.** The single configured rule is `LaunchBlackList`, and it is **empty**. That means no third-party app — including ours — is blocked from launching at boot or wake. We do **not** need root, and we do **not** need to ask the user to whitelist us. This eliminates the largest perceived risk in the autostart plan.
+2. **`FlingApp` is the ACTUAL autostart-target mechanism on FYT firmware** (the commented `com.tencent.mm` example is WeChat). The FYT power controller calls `startActivity` for whichever package is listed under `<FlingApp><packageName>...</packageName></FlingApp>` on every wake/boot. This is the **mechanical primitive that the DUDU `Settings → Canbus → Startup Settings → Select app to auto start on bootup` UI ultimately writes to** (or to a per-user equivalent under `/data/`). Two implications:
+   * Picking our app in that DUDU UI literally edits this XML (or its `/data/...` overlay) and the firmware will explicitly launch us — bypassing the Android stopped-state block entirely. This **confirms** the primary autostart path works end-to-end on this exact unit.
+   * For power users without GUI access, we can document a manual fallback: `setprop` won't work (file-driven), but `adb root && adb remount && adb shell sed -i ...` would. We will NOT recommend this — the GUI picker is the intended path.
+3. **No persistent kill-on-shutdown list exists in this file.** The DAB-Z "won't auto-resume" complaint is therefore NOT caused by `pwctl` killing the app — it's caused either by (a) DAB-Z not being picked in the Canbus picker, or (b) the USB dongle re-enumeration race. Both are addressed by our existing plan.
+
+### Updated autostart strategy (downgraded complexity)
+
+The layered defense in the original plan can be **simplified** for THIS unit:
+
+| Layer | Original plan | Updated for this unit |
+|---|---|---|
+| Primary | DUDU Canbus picker | **Same — confirmed mechanically backed by `FlingApp` in `/vendor/etc/pwctl_config.xml`** |
+| Secondary | `BOOT_COMPLETED` receiver + FGS | Keep — defends against picker not being set + provides the FGS host for USB |
+| Tertiary | OEM ACC intent fan-out (`com.fyt.boot.ACCON`, `com.cayboy.action.ACC_ON`, …) | **Demote** — `FlingApp` makes these redundant on this unit. Keep in manifest as a no-cost defensive measure for portability to non-DUDU FYT units. |
+| Quaternary | Battery-optimisation whitelist + vendor no-kill whitelist | **Drop the no-kill step** — `LaunchBlackList` is empty, no whitelist needed. Keep the standard `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` step. |
+
+## Confirmed Vendor APK Decompilation (2026-05-02 ADB pull + apkanalyzer)
+
+Pulled both vendor APKs:
+
+* `/odm/app/com.dudu.autoui/com.dudu.autoui.apk` (102 MB — Bangcle/Tencent Legu shell-protected; only manifest analysable, dex code is encrypted in `assets/0OO00l111l1l` and unwrapped at runtime by `lib/arm64-v8a/libshell-super.com.dudu.autoui.so`)
+* `/odm/app/190000000_com.syu.canbus/190000000_com.syu.canbus.apk` (86 MB — manifest + dex readable; `client=SYU`, `platform=C2`, build `2025-08-22 08:54:40`, target SDK 23 — runs in legacy permission mode)
+
+### `com.dudu.autoui` (DUDU launcher) — `BootReceiver` intent filters
+
+```xml
+<receiver android:name="com.dudu.autoui.receiver.BootReceiver" android:exported="true">
+  <intent-filter>
+    <action android:name="byd.intent.minikaraoke_micpowerevent" />
+  </intent-filter>
+  <intent-filter>
+    <action android:name="android.intent.action.BOOT_COMPLETED" />
+    <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+    <category android:name="android.intent.category.LAUNCHER" />
+  </intent-filter>
+  <intent-filter>
+    <action android:name="com.nwd.ACTION_AFTER_BOOT_COMPLETED" />
+    <action android:name="com.nwd.action.ACTION_GOHOME" />
+    <action android:name="com.nwd.action.ACTION_MCU_STATE_CHANGE" />
+  </intent-filter>
+  <intent-filter>
+    <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+    <action android:name="android.intent.action.USER_PRESENT" />
+    <action android:name="android.intent.action.ACTION_POWER_CONNECTED" />
+    <!-- … additional power/user/screen actions … -->
+  </intent-filter>
+</receiver>
+```
+
+### Headline finding — the **`com.nwd.*` family** is the real ACC/MCU broadcast namespace on this firmware
+
+This was the missing piece. The folklore intent table (`com.fyt.boot.ACCON`, `com.cayboy.action.ACC_ON`, …) does NOT match this firmware. The actual ACC/MCU/wake broadcasts are:
+
+| Action | Meaning (inferred) | Listened to by |
+|---|---|---|
+| `com.nwd.ACTION_AFTER_BOOT_COMPLETED` | NWD-firmware "boot fully ready" — fires AFTER `BOOT_COMPLETED` once the MCU/canbus link is up. The reliable post-wake signal. | DUDU launcher BootReceiver |
+| `com.nwd.action.ACTION_MCU_STATE_CHANGE` | MCU power/ACC state transition (ACC on, ACC off, screen on/off, illumination, reverse, brake) — payload-driven | DUDU launcher BootReceiver |
+| `com.nwd.action.ACTION_GOHOME` | Hardware HOME-key press from the steering wheel / front panel | DUDU launcher BootReceiver |
+
+`NWD` is the FYT MCU bridge namespace (NWD = "Newdrive" — used across FYT-derivative firmwares including DUDU / Mekede / Joying-FYT-line). Confirmed by external research: the same `com.nwd.*` actions appear in `com.fyt.GpsService` and `com.syu.icarbase` on FYT 7862-class firmwares.
+
+### `com.syu.canbus` — minor finding
+
+* Target SDK 23 (Android 6.0) — runs in legacy permission mode, exempt from many of the Android 12+ implicit-broadcast restrictions, which is how it bridges MCU events to the rest of the system.
+* `sharedUserId="android.uid.systemui"` — runs WITH SystemUI's UID, so it has system-level broadcast privileges. This is what allows `com.nwd.*` broadcasts to reach manifest-declared receivers in third-party apps without being throttled.
+* No ACC broadcast strings exposed in the manifest — they live in dex code (and surface as the `com.nwd.*` actions the DUDU launcher consumes above).
+* Strings of interest in dex: per-vehicle "ignition switch ON/OFF" UI labels (this is a UI app for vehicle settings), no autostart logic of its own — it's the *source* of the NWD broadcasts, not a consumer.
+
+### Updated layered autostart strategy (this is the FINAL one for this unit)
+
+| Layer | Action | Status |
+|---|---|---|
+| 0 (manual) | DUDU `Settings → Canbus → Startup Settings → Select app to auto start on bootup` (writes our package into `pwctl_config.xml`'s `<FlingApp>`) | **Primary** — empty `LaunchBlackList` confirms no kill, `FlingApp` triggers explicit launcher intent (bypasses stopped-state) |
+| 1 (manifest) | `BootReceiver` filtering: `BOOT_COMPLETED`, `LOCKED_BOOT_COMPLETED`, `MY_PACKAGE_REPLACED`, `QUICKBOOT_POWERON`, **`com.nwd.ACTION_AFTER_BOOT_COMPLETED`**, **`com.nwd.action.ACTION_MCU_STATE_CHANGE`** | **High-value secondary** — `com.nwd.*` is the actual ACC/MCU bus on this firmware; we now know to subscribe |
+| 2 (FGS) | `mediaPlayback` foreground service started from receiver, hosts USB attach, snapshots `UsbManager.deviceList`, schedules 12 s retry | Same as planned |
+| 3 (defensive) | Old folklore intents (`com.fyt.boot.ACCON`, `com.cayboy.action.ACC_ON`, etc.) | **Demoted** — keep in manifest only for portability to non-DUDU FYT units; `com.nwd.*` supersedes them on this unit |
+| 4 (UX) | One-tap battery-optimisation prompt (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`) | Keep |
+| — (dropped) | Vendor no-kill whitelist editing | **Dropped** — `LaunchBlackList` already empty |
+
+### Implementation note for the BootReceiver
+
+Add these new actions to the manifest filter:
+
+```xml
+<intent-filter android:priority="1000">
+    <!-- Standard AOSP -->
+    <action android:name="android.intent.action.BOOT_COMPLETED" />
+    <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+    <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+    <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+    <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+    <action android:name="android.intent.action.BOOT_IPO" />
+    <!-- FYT/NWD MCU bridge — confirmed live on this firmware via com.dudu.autoui decompilation -->
+    <action android:name="com.nwd.ACTION_AFTER_BOOT_COMPLETED" />
+    <action android:name="com.nwd.action.ACTION_MCU_STATE_CHANGE" />
+    <!-- Defensive (other FYT/MTC/Allwinner firmwares) -->
+    <action android:name="com.fyt.boot.ACCON" />
+    <action android:name="com.glsx.boot.ACCON" />
+    <action android:name="com.cayboy.action.ACC_ON" />
+    <action android:name="com.carboy.action.ACC_ON" />
+    <action android:name="com.microntek.startApp" />
+</intent-filter>
+```
+
+For `com.nwd.action.ACTION_MCU_STATE_CHANGE`, inspect the intent extras (the FYT MCU service typically attaches `state=` int or `acc=true/false`) before deciding whether to start the foreground service — fires on every MCU transition, not just wake.
+
+## Potential Next Research
+  * Reasoning: Now that we know the firmware is FYT, `com.fyt.boot.ACCON` and `com.fyt.*` family intents are the most likely real wake signals — but they may be blocked by Android 13 implicit-broadcast rules.
+* `adb shell pm list packages | grep -iE 'fyt|syu|dudu|task|canbus|mcu'` to enumerate the FYT/DUDU vendor app inventory.
+  * Reasoning: Locates `com.syu.ms` (FYT MediaService), the DUDU Tasks app, and the Canbus settings provider so we can `adb pull` them for static analysis.
+* `adb pull` the FYT `com.syu.ms.apk` and inspect `assets/property/player_app.txt` to see whether adding our package would enable FYT auto-resume — and pull the DUDU Tasks APK to discover the exact "Vehicle Ignition" trigger broadcast.
+  * Reasoning: Lets us listen directly and skip the Tasks-app manual configuration step.
+* Confirm whether our app appears in `Settings → Canbus → Startup Settings → Select app to auto start on bootup` after install with a standard `MAIN`/`LAUNCHER` activity.
+  * Reasoning: Forum user `dogsfoot` reports Carlink 2.0 is missing from the picker; we need to know whether DUDU filters by some extra category.
+* Check for an FYT/DUDU "no-kill" / "boot whitelist" file: `adb shell ls -la /system/etc/ /vendor/etc/ | grep -iE 'whitelist|pwctl|noclean|persist'`.
+  * Reasoning: FYT firmwares ship `pwctl_config.xml`; if our package isn't whitelisted, the firmware may force-stop us at shutdown and re-trigger the stopped-state block.
+* Verify USB-permission persistence and Monkeyboard re-enumeration delay across a real ACC-off → 5-min sleep → ACC-on cycle (`adb shell dumpsys usb` snapshots + `logcat -b all`).
+  * Reasoning: 5–10 s assumption is from forum reports; we need a measurement on this exact firmware/dongle pair to tune the post-boot retry delay.
 
 ## Research Executed
 

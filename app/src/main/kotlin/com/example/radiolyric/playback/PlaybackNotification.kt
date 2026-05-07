@@ -7,6 +7,7 @@ import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
+import com.example.radiolyric.data.radio.NowPlaying
 
 internal object PlaybackNotification {
     const val CHANNEL_ID = "playback"
@@ -30,6 +31,28 @@ internal object PlaybackNotification {
                 .setOnlyAlertOnce(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
+                .build()
+    }
+
+    /**
+     * Session-less foreground notification used in DAB-Z bridge mode. We do not co-publish a
+     * `MediaSession` (DD-05/DD-06), so there is no `MediaStyle` and no transport actions; the
+     * notification is purely informational and reflects the current `NowPlaying` from DAB-Z.
+     */
+    fun buildBridge(context: Context, currentNp: NowPlaying): Notification {
+        ensureChannel(context)
+        val title = currentNp.title?.takeIf { it.isNotBlank() } ?: "Radio Lyric"
+        val text =
+                currentNp.artist?.takeIf { it.isNotBlank() }
+                        ?: "Reading now-playing from DAB-Z"
+        return NotificationCompat.Builder(context, CHANNEL_ID)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setSmallIcon(android.R.drawable.stat_notify_sync)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setCategory(NotificationCompat.CATEGORY_STATUS)
                 .build()
     }
 

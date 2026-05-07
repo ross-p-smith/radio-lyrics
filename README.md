@@ -74,6 +74,12 @@ adb shell dumpsys usb | grep -i 16c0:05dc
 adb logcat -s PlaybackService OmriUsbRadioSource AudioPump UsbPermissionGateway
 ```
 
+## Documentation
+
+- [docs/project-status.md](docs/project-status.md) — verified build state, what works on-device, what's blocked on hardware, prioritised backlog.
+- [docs/dab-driver-bringup.md](docs/dab-driver-bringup.md) — how the wRadio C100 (yonghx 16C0:05DC) dongle was made to lock under our `omri-usb` fork.
+- [docs/target-device-facts.md](docs/target-device-facts.md) — authoritative live-captured facts about the Mekede DUDU7 head unit.
+
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |

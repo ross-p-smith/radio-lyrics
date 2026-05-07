@@ -58,12 +58,13 @@ android {
                     if (includeFolklore) action else "com.example.radiolyric.disabled.acc${index + 1}"
         }
 
-        // Debug-only chooser between OmriUsbRadioSource and FakeRadioSource. Default `real` keeps
-        // on-device hardware iteration friction-free; pass `-Pradio.source=fake` for hardware-free
-        // builds. See app/src/debug/.../di/DebugRadioBindings.kt for how this is consumed.
+        // Build-time chooser between radio backends. Default `real` keeps on-device hardware
+        // iteration friction-free; pass `-Pradio.source=fake` for hardware-free debug builds, or
+        // `-Pradio.source=dabz` to consume DAB-Z's MediaBrowserService instead of driving USB.
+        // See app/src/debug/.../di/DebugRadioBindings.kt for how this is consumed.
         val radioSource = (project.findProperty("radio.source") as? String ?: "real").lowercase()
-        require(radioSource in setOf("real", "fake")) {
-            "radio.source must be 'real' or 'fake' (got: '$radioSource')"
+        require(radioSource in setOf("real", "fake", "dabz")) {
+            "radio.source must be 'real', 'fake', or 'dabz' (got: '$radioSource')"
         }
         buildConfigField("String", "RADIO_SOURCE", "\"$radioSource\"")
     }
@@ -157,6 +158,11 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.media3.common)
+
+    // androidx.media (compat) — MediaBrowserCompat / MediaControllerCompat / MediaMetadataCompat
+    // used by the DAB-Z bridge (radio.source=dabz). DAB-Z publishes a MediaSessionCompat and a
+    // MediaBrowserServiceCompat, so the compat classes are the right consumer surface.
+    implementation(libs.androidx.media.compat)
 
     // Hilt
     implementation(libs.hilt.android)

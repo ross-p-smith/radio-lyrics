@@ -28,6 +28,10 @@ install: connect ## Install the debug APK on the connected device (arm64).
 install-fake: connect ## Install the debug APK with the fake radio source.
 	$(GRADLEW) :app:installDebug -Pradio.source=fake -Pandroid.injected.build.abi=arm64-v8a
 
+.PHONY: install-dabz
+install-dabz: connect ## Install the debug APK in DAB-Z bridge mode (consumes com.zoulou.dab).
+	$(GRADLEW) :app:installDebug -Pradio.source=dabz -Pandroid.injected.build.abi=arm64-v8a
+
 .PHONY: run
 run: install ## Install + launch the app.
 	$(ADB) shell monkey -p $(PKG) -c android.intent.category.LAUNCHER 1
@@ -43,6 +47,21 @@ stop-dabz: ## Force-stop DAB-Z so it releases the USB dongle.
 .PHONY: logs
 logs: ## Tail filtered logcat for our app + omri-usb subsystems.
 	$(ADB) logcat -v time | grep --line-buffered -iE 'omri|UsbHelper|TunerUsbImpl|RaonTunerInput|RadioPlayer|OmriUsb|DabEnsemble|LockStat|tunerScanFinished|TunerStatus|ForegroundService|PlaybackService|radiolyric'
+
+.PHONY: logs-dabz
+logs-dabz: ## Tail logcat filtered to the DAB-Z bridge tags.
+	$(ADB) logcat -v time -s DabzMediaBrowserClient:* DabzBridgeRadioSource:* DabzMediaListener:* RadioBindings:* PlaybackService:*
+
+.PHONY: verify-dabz
+verify-dabz: connect ## Run Phase 5.1 on-device verification (media_session + DabMediaBrowserService + NLS).
+	@echo "--- DAB-Z media_session entry ---"
+	$(ADB) shell dumpsys media_session | sed -n '/com.zoulou.dab/,/^$$/p'
+	@echo "--- DabMediaBrowserService export ---"
+	$(ADB) shell dumpsys package com.zoulou.dab | grep -A3 -iE 'mediabrowser|exported=true' || true
+	@echo "--- enabled NotificationListeners ---"
+	$(ADB) shell settings get secure enabled_notification_listeners
+	@echo "--- our requestAudioFocus calls (should be empty) ---"
+	$(ADB) shell dumpsys audio | grep $(PKG) || echo "(none — read-only consumer OK)"
 
 .PHONY: logs-clear
 logs-clear: ## Clear the device logcat buffer.

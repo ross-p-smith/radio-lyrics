@@ -6,3 +6,5 @@ local.properties
 captures/
 .cxx/
 .kotlin/
+vendor-apks/
+app/src/debug/assets/fixtures/

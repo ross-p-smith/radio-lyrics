@@ -1,9 +1,12 @@
 package com.example.radiolyric.playback
 
+import android.app.Notification
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import androidx.core.app.NotificationCompat
 import androidx.media3.common.util.UnstableApi
+import com.example.radiolyric.BuildConfig
 import com.example.radiolyric.devtools.AppLog as Log
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -34,6 +37,12 @@ import kotlinx.coroutines.launch
  * The Media3 framework auto-publishes the foreground notification via the default
  * `MediaNotificationProvider` once the session is registered, so we only need to ensure the
  * notification channel exists.
+ *
+ * **DAB-Z mode (`BuildConfig.RADIO_SOURCE == "dabz"`):** the service still runs as a foreground
+ * service so the OS keeps us alive during a drive, but skips Media3 `MediaSession` construction,
+ * `RadioPlayer`, the audio pump, and the auto-tune call. DAB-Z owns the tuner and audio render;
+ * we are a read-only metadata consumer (see `DabzBridgeRadioSource` and DD-06 in the planning
+ * log). The session-less foreground notification reflects the current `NowPlaying` from DAB-Z.
  */
 @AndroidEntryPoint
 @UnstableApi
@@ -46,23 +55,34 @@ class PlaybackService : MediaSessionService() {
     private var metaJob: Job? = null
 
     private val audioPump = AudioPump()
-    private lateinit var player: RadioPlayer
+    private var player: RadioPlayer? = null
     private var session: MediaSession? = null
     private var openInProgress = false
+
+    private val isDabzMode: Boolean
+        get() = BuildConfig.RADIO_SOURCE == "dabz"
 
     override fun onCreate() {
         super.onCreate()
         // AudioVolumePolicy: never call AudioManager.setStreamVolume(STREAM_MUSIC, …)
         // — see AudioVolumePolicy.kt (Mekede DUDU7 SYU canbus overwrites it every ~10s).
         PlaybackNotification.ensureChannel(this)
-        player =
+
+        if (isDabzMode) {
+            Log.i(TAG, "DAB-Z mode: skipping MediaSession/RadioPlayer/AudioPump construction")
+            startCollectingMetadata()
+            return
+        }
+
+        val newPlayer =
                 RadioPlayer(
                         looper = mainLooper,
                         onPlayWhenReadyChange = { wantsPlay ->
                             if (wantsPlay) audioPump.resume() else audioPump.pause()
                         },
                 )
-        session = MediaSession.Builder(this, player).setId("radio-lyric-session").build()
+        player = newPlayer
+        session = MediaSession.Builder(this, newPlayer).setId("radio-lyric-session").build()
 
         startCollectingMetadata()
         startCollectingAudio()
@@ -75,7 +95,9 @@ class PlaybackService : MediaSessionService() {
         // than that (full DAB band-III scan is ~2 minutes), so we publish a placeholder
         // "Preparing…" notification immediately. Media3's DefaultMediaNotificationProvider will
         // replace it with the real now-playing notification once the MediaSession goes active.
-        val preparing = PlaybackNotification.buildPreparing(this)
+        val preparing: Notification =
+                if (isDabzMode) PlaybackNotification.buildBridge(this, currentNp = radioSource.nowPlaying.value)
+                else PlaybackNotification.buildPreparing(this)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                     PlaybackNotification.FOREGROUND_NOTIFICATION_ID,
@@ -85,6 +107,19 @@ class PlaybackService : MediaSessionService() {
         } else {
             startForeground(PlaybackNotification.FOREGROUND_NOTIFICATION_ID, preparing)
         }
+
+        if (isDabzMode) {
+            if (!openInProgress) {
+                openInProgress = true
+                scope.launch {
+                    runCatching { radioSource.open().getOrThrow() }
+                            .onFailure { Log.w(TAG, "DAB-Z bridge open() failed", it) }
+                    openInProgress = false
+                }
+            }
+            return START_STICKY
+        }
+
         if (!openInProgress && session != null) {
             openInProgress = true
             scope.launch {
@@ -96,7 +131,7 @@ class PlaybackService : MediaSessionService() {
                 openInProgress = false
             }
             // Reflect the autostart intent on the player so the notification shows "playing".
-            player.setNowPlaying(
+            player?.setNowPlaying(
                     artist = null,
                     title = Stations.HeartUK.label,
                     source = "DAB",
@@ -105,7 +140,11 @@ class PlaybackService : MediaSessionService() {
         return START_STICKY
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
+        // DAB-Z mode: defence-in-depth — never expose a session even if Media3 binds us.
+        if (isDabzMode) return null
+        return session
+    }
 
     override fun onDestroy() {
         audioJob?.cancel()
@@ -113,10 +152,11 @@ class PlaybackService : MediaSessionService() {
         scope.cancel()
         audioPump.release()
         session?.run {
-            player.release()
+            player?.release()
             release()
         }
         session = null
+        player = null
         // Detach radio source on a final non-suspending hop; if this is too slow the JVM still
         // tears down the process.
         scope.launch { runCatching { radioSource.close() } }
@@ -139,13 +179,29 @@ class PlaybackService : MediaSessionService() {
                             .distinctUntilChangedBy { it.artist to it.title }
                             .debounce(METADATA_DEBOUNCE_MS)
                             .collectLatest { np ->
-                                player.setNowPlaying(
-                                        artist = np.artist,
-                                        title = np.title,
-                                        source = np.source.name,
-                                )
+                                if (isDabzMode) {
+                                    refreshDabzNotification(np)
+                                } else {
+                                    player?.setNowPlaying(
+                                            artist = np.artist,
+                                            title = np.title,
+                                            source = np.source.name,
+                                    )
+                                }
                             }
                 }
+    }
+
+    @android.annotation.SuppressLint("MissingPermission")
+    private fun refreshDabzNotification(np: com.example.radiolyric.data.radio.NowPlaying) {
+        val notification = PlaybackNotification.buildBridge(this, currentNp = np)
+        val nm = androidx.core.app.NotificationManagerCompat.from(this)
+        // POST_NOTIFICATIONS is requested in MainActivity; missing-permission only causes a no-op
+        // notify() rather than a crash, so the lint warning is intentionally suppressed.
+        runCatching {
+            nm.notify(PlaybackNotification.FOREGROUND_NOTIFICATION_ID, notification)
+        }
+                .onFailure { Log.w(TAG, "DAB-Z notification refresh failed", it) }
     }
 
     private companion object {
