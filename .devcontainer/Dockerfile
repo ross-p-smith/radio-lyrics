@@ -49,6 +49,10 @@ RUN yes | sdkmanager --licenses >/dev/null \
 # Permissions for the non-root vscode user
 RUN chown -R vscode:vscode ${ANDROID_HOME}
 
+# Prepare mounted volume directories and set permissions
+RUN mkdir -p /home/vscode/.gradle/wrapper /home/vscode/.android/cache \
+    && chown -R vscode:vscode /home/vscode/.gradle /home/vscode/.android
+
 USER vscode
 
 # Install Gradle via SDKMAN (provided by Java feature) — optional; gradlew is preferred
