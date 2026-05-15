@@ -31,9 +31,9 @@ object NetworkModule {
         }
         return OkHttpClient.Builder()
                 .addInterceptor(userAgent)
-                .callTimeout(3, TimeUnit.SECONDS)
-                .connectTimeout(2, TimeUnit.SECONDS)
-                .readTimeout(3, TimeUnit.SECONDS)
+                .callTimeout(10, TimeUnit.SECONDS)
+                .connectTimeout(5, TimeUnit.SECONDS)
+                .readTimeout(8, TimeUnit.SECONDS)
                 .build()
     }
 

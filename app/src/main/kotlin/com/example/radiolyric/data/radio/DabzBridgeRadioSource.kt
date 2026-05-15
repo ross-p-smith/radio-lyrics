@@ -27,21 +27,23 @@ import kotlinx.coroutines.sync.withLock
 
 /**
  * [RadioSource] implementation that consumes DAB-Z's exported `MediaBrowserService` via
- * [DabzMediaBrowserClient] and projects its [DabzSnapshot] stream onto our existing
- * [NowPlaying] / [RadioState] surface.
+ * [DabzMediaBrowserClient] and projects its [DabzSnapshot] stream onto our existing [NowPlaying] /
+ * [RadioState] surface.
  *
  * This source is **read-only**: DAB-Z owns the tuner and audio render, so:
  * - [audio] is `emptyFlow()` — the Compose UI does not render PCM in DAB-Z mode.
- * - [tune] returns `Result.failure(UnsupportedOperationException)` — station selection happens
- *   in DAB-Z's own UI (see WI-01 in the planning log for the picker UX follow-up).
+ * - [tune] returns `Result.failure(UnsupportedOperationException)` — station selection happens in
+ * DAB-Z's own UI (see WI-01 in the planning log for the picker UX follow-up).
  * - We never call `requestAudioFocus`; `PlaybackService` is hard-gated to skip session/player
- *   construction in DAB-Z mode (DD-06 in the planning log).
+ * construction in DAB-Z mode (DD-06 in the planning log).
  *
  * Station-change reset (DR-04): when `playbackState.activeQueueItemId` changes we emit
  * `NowPlaying.Empty` first so downstream `LyricsRepository` collectors observe a clean reset and
- * discard the previous lyrics. Additionally, if no non-blank artist has been seen for >30 s we
- * also emit `NowPlaying.Empty` to cover DAB-Z fallbacks where DL+ disappears across a station
- * hop without a queue-id change.
+ * discard the previous lyrics. Additionally, if no non-blank artist has been seen for >5 min we
+ * also emit `NowPlaying.Empty` to cover DAB-Z fallbacks where DL+ disappears across a station hop
+ * without a queue-id change. The timeout must comfortably exceed typical track length because
+ * DAB-Z re-emits the same DL+ payload only ~once per minute, so a shorter window would wipe the
+ * track mid-play.
  */
 @Singleton
 class DabzBridgeRadioSource
@@ -80,7 +82,10 @@ constructor(
             }
 
     override suspend fun tune(station: Station): Result<Unit> {
-        Log.i(TAG, "tune(${station.label}) ignored \u2014 DAB-Z owns tuner; switch stations in DAB-Z UI")
+        Log.i(
+                TAG,
+                "tune(${station.label}) ignored \u2014 DAB-Z owns tuner; switch stations in DAB-Z UI"
+        )
         return Result.failure(
                 UnsupportedOperationException(
                         "DAB-Z owns tuner; switch stations in DAB-Z UI",
@@ -104,8 +109,8 @@ constructor(
         _state.value =
                 when (snapshot.playback?.state) {
                     PlaybackStateCompat.STATE_PLAYING -> RadioState.Playing(DabzExternalStation)
-                    PlaybackStateCompat.STATE_BUFFERING,
-                    PlaybackStateCompat.STATE_CONNECTING -> RadioState.Tuning
+                    PlaybackStateCompat.STATE_BUFFERING, PlaybackStateCompat.STATE_CONNECTING ->
+                            RadioState.Tuning
                     null -> _state.value
                     else -> RadioState.Idle
                 }
@@ -114,8 +119,7 @@ constructor(
         val newQueueItemId =
                 snapshot.playback?.activeQueueItemId
                         ?: PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN
-        if (
-                hasSeenAnyMetadata &&
+        if (hasSeenAnyMetadata &&
                         newQueueItemId != lastQueueItemId &&
                         newQueueItemId != PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN
         ) {
@@ -154,7 +158,7 @@ constructor(
 
     private companion object {
         private const val TAG = "DabzBridgeRadioSource"
-        private const val STALE_ARTIST_TIMEOUT_MS = 30_000L
+        private const val STALE_ARTIST_TIMEOUT_MS = 300_000L
     }
 }
 

@@ -56,6 +56,7 @@ class DabzMediaBrowserClient(
             val cb =
                     object : MediaControllerCompat.Callback() {
                         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
+                            logMetadata("onMetadataChanged", metadata)
                             current = current.copy(metadata = metadata)
                             emitCurrent()
                         }
@@ -73,6 +74,7 @@ class DabzMediaBrowserClient(
                     }
             newController.registerCallback(cb, handler)
             // Snapshot *after* callback registration to close the first-connect race window.
+            logMetadata("initial snapshot", newController.metadata)
             current =
                     DabzSnapshot(
                             metadata = newController.metadata,
@@ -100,9 +102,11 @@ class DabzMediaBrowserClient(
             )
         }
         connectFn = {
+            Log.i(TAG, "connect attempt=${attempt + 1} pkg=$targetPackage cls=$targetClass")
             val connectionCallback =
                     object : MediaBrowserCompat.ConnectionCallback() {
                         override fun onConnected() {
+                            Log.i(TAG, "onConnected")
                             attempt = 0
                             val b = browser ?: return
                             runCatching { installController(b.sessionToken) }
@@ -166,6 +170,27 @@ class DabzMediaBrowserClient(
         const val DABZ_PACKAGE = "com.zoulou.dab"
         const val DABZ_BROWSER_SERVICE = "com.zoulou.dab.service.DabMediaBrowserService"
         private const val TAG = "DabzMediaBrowserClient"
+
+        // Diagnostic: dump every key DAB-Z publishes so we can adapt the mapper to whatever
+        // formatting variant a given DAB-Z release uses. Logged at INFO; cheap and bounded.
+        // Reads via the raw bundle to avoid `MediaMetadataCompat.getString` throwing the noisy
+        // `Bundle: Attempt to cast generated internal exception` stack on non-CharSequence keys
+        // such as `METADATA_KEY_RATING` (which is a Parcelable).
+        internal fun logMetadata(reason: String, metadata: MediaMetadataCompat?) {
+            if (metadata == null) {
+                Log.i(TAG, "$reason: metadata=null")
+                return
+            }
+            val bundle = metadata.bundle
+            val keys = bundle.keySet().sorted()
+            val sb = StringBuilder("$reason: keys=${keys.size}")
+            for (k in keys) {
+                val v = runCatching { bundle.get(k)?.toString() }.getOrNull()
+                val short = v?.take(120)?.replace('\n', ' ')
+                sb.append("\n  ").append(k).append(" = ").append(short)
+            }
+            Log.i(TAG, sb.toString())
+        }
 
         // Suppress unused import warnings for the suspending helper used in tests-only paths.
         @Suppress("unused") private suspend fun await(ms: Long) = delay(ms)

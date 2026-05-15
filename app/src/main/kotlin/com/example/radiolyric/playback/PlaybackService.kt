@@ -4,15 +4,14 @@ import android.app.Notification
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
-import androidx.core.app.NotificationCompat
 import androidx.media3.common.util.UnstableApi
-import com.example.radiolyric.BuildConfig
-import com.example.radiolyric.devtools.AppLog as Log
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import com.example.radiolyric.BuildConfig
 import com.example.radiolyric.data.radio.RadioSource
 import com.example.radiolyric.data.radio.Stations
 import com.example.radiolyric.data.radio.UsbDispatchers
+import com.example.radiolyric.devtools.AppLog as Log
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -40,9 +39,9 @@ import kotlinx.coroutines.launch
  *
  * **DAB-Z mode (`BuildConfig.RADIO_SOURCE == "dabz"`):** the service still runs as a foreground
  * service so the OS keeps us alive during a drive, but skips Media3 `MediaSession` construction,
- * `RadioPlayer`, the audio pump, and the auto-tune call. DAB-Z owns the tuner and audio render;
- * we are a read-only metadata consumer (see `DabzBridgeRadioSource` and DD-06 in the planning
- * log). The session-less foreground notification reflects the current `NowPlaying` from DAB-Z.
+ * `RadioPlayer`, the audio pump, and the auto-tune call. DAB-Z owns the tuner and audio render; we
+ * are a read-only metadata consumer (see `DabzBridgeRadioSource` and DD-06 in the planning log).
+ * The session-less foreground notification reflects the current `NowPlaying` from DAB-Z.
  */
 @AndroidEntryPoint
 @UnstableApi
@@ -96,7 +95,11 @@ class PlaybackService : MediaSessionService() {
         // "Preparing…" notification immediately. Media3's DefaultMediaNotificationProvider will
         // replace it with the real now-playing notification once the MediaSession goes active.
         val preparing: Notification =
-                if (isDabzMode) PlaybackNotification.buildBridge(this, currentNp = radioSource.nowPlaying.value)
+                if (isDabzMode)
+                        PlaybackNotification.buildBridge(
+                                this,
+                                currentNp = radioSource.nowPlaying.value
+                        )
                 else PlaybackNotification.buildPreparing(this)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
@@ -112,8 +115,9 @@ class PlaybackService : MediaSessionService() {
             if (!openInProgress) {
                 openInProgress = true
                 scope.launch {
-                    runCatching { radioSource.open().getOrThrow() }
-                            .onFailure { Log.w(TAG, "DAB-Z bridge open() failed", it) }
+                    runCatching { radioSource.open().getOrThrow() }.onFailure {
+                        Log.w(TAG, "DAB-Z bridge open() failed", it)
+                    }
                     openInProgress = false
                 }
             }
@@ -198,9 +202,7 @@ class PlaybackService : MediaSessionService() {
         val nm = androidx.core.app.NotificationManagerCompat.from(this)
         // POST_NOTIFICATIONS is requested in MainActivity; missing-permission only causes a no-op
         // notify() rather than a crash, so the lint warning is intentionally suppressed.
-        runCatching {
-            nm.notify(PlaybackNotification.FOREGROUND_NOTIFICATION_ID, notification)
-        }
+        runCatching { nm.notify(PlaybackNotification.FOREGROUND_NOTIFICATION_ID, notification) }
                 .onFailure { Log.w(TAG, "DAB-Z notification refresh failed", it) }
     }
 

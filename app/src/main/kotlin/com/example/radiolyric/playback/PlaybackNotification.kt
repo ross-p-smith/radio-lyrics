@@ -42,9 +42,7 @@ internal object PlaybackNotification {
     fun buildBridge(context: Context, currentNp: NowPlaying): Notification {
         ensureChannel(context)
         val title = currentNp.title?.takeIf { it.isNotBlank() } ?: "Radio Lyric"
-        val text =
-                currentNp.artist?.takeIf { it.isNotBlank() }
-                        ?: "Reading now-playing from DAB-Z"
+        val text = currentNp.artist?.takeIf { it.isNotBlank() } ?: "Reading now-playing from DAB-Z"
         return NotificationCompat.Builder(context, CHANNEL_ID)
                 .setContentTitle(title)
                 .setContentText(text)

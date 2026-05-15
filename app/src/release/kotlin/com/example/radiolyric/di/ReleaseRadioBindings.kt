@@ -1,10 +1,10 @@
 package com.example.radiolyric.di
 
 import com.example.radiolyric.BuildConfig
-import com.example.radiolyric.devtools.AppLog as Log
 import com.example.radiolyric.data.radio.DabzBridgeRadioSource
 import com.example.radiolyric.data.radio.OmriUsbRadioSource
 import com.example.radiolyric.data.radio.RealRadioSourceProvider
+import com.example.radiolyric.devtools.AppLog as Log
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

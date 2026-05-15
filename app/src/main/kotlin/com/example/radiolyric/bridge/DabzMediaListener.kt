@@ -28,10 +28,10 @@ import kotlinx.coroutines.flow.callbackFlow
  *
  * Lifecycle (consumer subagent §2.2):
  * - `onListenerConnected` → register a `MediaSessionManager.OnActiveSessionsChangedListener`
- *   filtered to this service's component, capture the first DAB-Z controller, and forward its
- *   metadata + playback callbacks into the snapshot stream.
- * - `onListenerDisconnected` → release everything and fall silent. The system restarts the
- *   service automatically; the next `onListenerConnected` re-attaches cleanly.
+ * filtered to this service's component, capture the first DAB-Z controller, and forward its
+ * metadata + playback callbacks into the snapshot stream.
+ * - `onListenerDisconnected` → release everything and fall silent. The system restarts the service
+ * automatically; the next `onListenerConnected` re-attaches cleanly.
  */
 class DabzMediaListener : NotificationListenerService() {
 

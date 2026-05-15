@@ -1,11 +1,11 @@
 package com.example.radiolyric.di
 
 import com.example.radiolyric.BuildConfig
-import com.example.radiolyric.devtools.AppLog as Log
 import com.example.radiolyric.data.radio.DabzBridgeRadioSource
 import com.example.radiolyric.data.radio.FakeRadioSource
 import com.example.radiolyric.data.radio.OmriUsbRadioSource
 import com.example.radiolyric.data.radio.RealRadioSourceProvider
+import com.example.radiolyric.devtools.AppLog as Log
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -20,8 +20,8 @@ import javax.inject.Singleton
  * `BuildConfig.RADIO_SOURCE`.
  *
  * Default is `real` so the fast `installDebug` cycle uses the actual tuner. Pass
- * `-Pradio.source=fake` for a hardware-free build, or `-Pradio.source=dabz` to consume DAB-Z.
- * The unused sides of the `when` are never instantiated thanks to `javax.inject.Provider`.
+ * `-Pradio.source=fake` for a hardware-free build, or `-Pradio.source=dabz` to consume DAB-Z. The
+ * unused sides of the `when` are never instantiated thanks to `javax.inject.Provider`.
  */
 @Module
 @InstallIn(SingletonComponent::class)
