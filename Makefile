@@ -85,3 +85,14 @@ lint: ## Run Android lint on debug.
 .PHONY: clean
 clean: ## Gradle clean.
 	$(GRADLEW) clean
+
+.PHONY: lyrics-seed-refresh
+lyrics-seed-refresh: ## Refresh prewarmed lyrics seed from Heart last played songs.
+	bash ./update_lyrics.sh
+
+.PHONY: lyrics-seed-validate
+lyrics-seed-validate: ## Validate seed JSONL structure and print sample entries.
+	@FILE=app/src/main/assets/lyrics/seed_lyrics_cache.jsonl; \
+	echo "Line count:"; wc -l $$FILE; \
+	echo "Validation:"; jq -e '.artist and .title and .provider' $$FILE >/dev/null && echo "OK"; \
+	echo "Sample tracks:"; head -n 10 $$FILE | jq -r '"- \(.artist) | \(.title)"'
