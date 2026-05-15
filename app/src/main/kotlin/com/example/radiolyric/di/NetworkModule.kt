@@ -19,8 +19,7 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 object NetworkModule {
 
     private const val LRCLIB_BASE_URL = "https://lrclib.net/"
-    private const val USER_AGENT =
-            "RadioLyric/0.1 (+https://github.com/ross-p-smith/radio-lyrics)"
+    private const val USER_AGENT = "RadioLyric/0.1"
 
     @Provides
     @Singleton
@@ -29,6 +28,7 @@ object NetworkModule {
             val req = chain.request().newBuilder().header("User-Agent", USER_AGENT).build()
             chain.proceed(req)
         }
+
         return OkHttpClient.Builder()
                 .addInterceptor(userAgent)
                 .callTimeout(10, TimeUnit.SECONDS)

@@ -28,9 +28,12 @@ constructor(
         Log.i(TAG, "lookup: artist='$artist' title='$title'")
 
         cache.find(artist, title)?.let {
+            Log.i(TAG, "lookup: source=CACHE artist='$artist' title='$title'")
             Log.i(TAG, "lookup: cache hit for '$artist' / '$title'")
             return it.toLyrics()
         }
+
+        Log.i(TAG, "lookup: source=NETWORK artist='$artist' title='$title'")
 
         val track =
                 runCatching {
