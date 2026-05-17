@@ -3,8 +3,6 @@ package com.example.radiolyric.ui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -24,9 +22,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 
 private object Routes {
-    const val NOW_PLAYING = "now_playing"
     const val LYRICS = "lyrics"
-    const val STATIONS = "stations"
 }
 
 /** Bottom-bar item descriptor. Public so the debug source set can construct one. */
@@ -34,9 +30,7 @@ data class NavItemSpec(val route: String, val label: String, val icon: ImageVect
 
 private val NavItems =
         listOf(
-                NavItemSpec(Routes.NOW_PLAYING, "Now Playing", Icons.Filled.MusicNote),
                 NavItemSpec(Routes.LYRICS, "Lyrics", Icons.Filled.Subtitles),
-                NavItemSpec(Routes.STATIONS, "Stations", Icons.Filled.LibraryMusic),
         )
 
 @Composable
@@ -70,20 +64,10 @@ fun AppNavigation() {
         Box(modifier = Modifier.fillMaxSize()) {
             NavHost(
                     navController = navController,
-                    startDestination = Routes.NOW_PLAYING,
+                    startDestination = Routes.LYRICS,
                     modifier = Modifier.fillMaxSize(),
             ) {
-                composable(Routes.NOW_PLAYING) {
-                    NowPlayingScreen(
-                            modifier = Modifier.fillMaxSize(),
-                            onOpenLyrics = { navController.navigate(Routes.LYRICS) },
-                            onOpenStations = { navController.navigate(Routes.STATIONS) },
-                    )
-                }
                 composable(Routes.LYRICS) { LyricsScreen(modifier = Modifier.fillMaxSize()) }
-                composable(Routes.STATIONS) {
-                    StationPickerScreen(modifier = Modifier.fillMaxSize())
-                }
                 installDebugRoutes(navController)
             }
             // innerPadding is consumed by the Scaffold; no extra inset needed in MVP since each

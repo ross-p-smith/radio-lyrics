@@ -35,23 +35,29 @@ constructor(
 
         Log.i(TAG, "lookup: source=NETWORK artist='$artist' title='$title'")
 
-        val track =
-                runCatching {
-                            withTimeout(NETWORK_TIMEOUT) {
-                                api.search(track = title, artist = artist).firstOrNull()
-                            }
-                        }
-                        .onFailure { e ->
-                            // True upstream cancellation (caller cancelled the collecting flow,
-                            // e.g. station change) must propagate so the surrounding
-                            // transformLatest unwinds cleanly. A TimeoutCancellationException
-                            // raised from inside withTimeout, however, is a real lookup failure
-                            // — the caller is still active, so ensureActive() does NOT throw and
-                            // we collapse to Lyrics.None like any other network error.
-                            coroutineContext.ensureActive()
-                            Log.w(TAG, "lookup: LRCLIB search failed for '$artist' / '$title'", e)
-                        }
-                        .getOrNull()
+        var track: LrcLibTrack? = null
+        var lastError: Throwable? = null
+        for (attempt in 0 until 3) {
+            val result = runCatching {
+                withTimeout(NETWORK_TIMEOUT) {
+                    api.search(track = title, artist = artist).firstOrNull()
+                }
+            }
+            if (result.isSuccess) {
+                track = result.getOrNull()
+                if (track != null) break
+            } else {
+                lastError = result.exceptionOrNull()
+                coroutineContext.ensureActive()
+                Log.w(
+                        TAG,
+                        "lookup: LRCLIB search failed (attempt ${attempt + 1}) for '$artist' / '$title'",
+                        lastError,
+                )
+                // Only retry on timeout or IO
+                if (lastError !is java.io.IOException && lastError !is kotlinx.coroutines.TimeoutCancellationException) break
+            }
+        }
         if (track == null) {
             Log.i(TAG, "lookup: LRCLIB returned no match for '$artist' / '$title'")
             return Lyrics.None

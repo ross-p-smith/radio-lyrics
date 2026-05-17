@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,17 +25,46 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.radiolyric.data.lyrics.LyricLine
 import com.example.radiolyric.presentation.LyricsUiState
 import com.example.radiolyric.presentation.LyricsViewModel
+import com.example.radiolyric.presentation.SongHeading
 
 @Composable
 fun LyricsScreen(modifier: Modifier = Modifier, viewModel: LyricsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    Box(modifier = modifier.fillMaxSize()) {
-        when (val s = state) {
-            LyricsUiState.Idle -> CenteredMessage("Waiting for now-playing metadata…")
-            LyricsUiState.Loading -> CenteredMessage("Looking up lyrics…")
-            LyricsUiState.None -> CenteredMessage("No lyrics available.")
-            is LyricsUiState.Plain -> PlainLyrics(s.text)
-            is LyricsUiState.Synced -> SyncedLyrics(s.lyrics.lines, viewModel)
+    val heading by viewModel.songHeading.collectAsStateWithLifecycle()
+
+    Column(modifier = modifier.fillMaxSize()) {
+        heading?.let { SongHeader(it) }
+        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+            when (val s = state) {
+                LyricsUiState.Idle -> CenteredMessage("Waiting for now-playing metadata…")
+                LyricsUiState.Loading -> CenteredMessage("Looking up lyrics…")
+                LyricsUiState.None -> CenteredMessage("No lyrics available.")
+                is LyricsUiState.Plain -> PlainLyrics(s.text)
+                is LyricsUiState.Synced -> SyncedLyrics(s.lyrics.lines, viewModel)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SongHeader(heading: SongHeading) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp)) {
+        Text(
+                text = heading.title,
+                style =
+                        MaterialTheme.typography.displaySmall.copy(
+                                fontFamily = FontFamily.Serif,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 34.sp,
+                        ),
+                color = MaterialTheme.colorScheme.onBackground,
+        )
+        heading.artist?.let { artist ->
+            Text(
+                    text = artist,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -65,8 +96,7 @@ private fun PlainLyrics(text: String) {
 
 @Composable
 private fun SyncedLyrics(lines: List<LyricLine>, viewModel: LyricsViewModel) {
-    val positionMs by viewModel.currentPositionMs.collectAsStateWithLifecycle()
-    val active = activeLineIndex(lines, positionMs)
+    val active by viewModel.activeLineIndex.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
     LaunchedEffect(active) {
@@ -99,22 +129,4 @@ private fun SyncedLyrics(lines: List<LyricLine>, viewModel: LyricsViewModel) {
             )
         }
     }
-}
-
-/** Binary-search the largest `i` such that `lines[i].timeMs <= positionMs`. */
-private fun activeLineIndex(lines: List<LyricLine>, positionMs: Long): Int {
-    if (lines.isEmpty()) return 0
-    var lo = 0
-    var hi = lines.size - 1
-    var ans = 0
-    while (lo <= hi) {
-        val mid = (lo + hi) ushr 1
-        if (lines[mid].timeMs <= positionMs) {
-            ans = mid
-            lo = mid + 1
-        } else {
-            hi = mid - 1
-        }
-    }
-    return ans
 }
