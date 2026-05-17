@@ -39,12 +39,14 @@ RUN mkdir -p ${ANDROID_HOME}/cmdline-tools \
     && mv ${ANDROID_HOME}/cmdline-tools/cmdline-tools ${ANDROID_HOME}/cmdline-tools/latest \
     && rm cmdline-tools.zip
 
-# Accept licenses + install platform/build-tools/platform-tools
+
+# Accept licenses + install platform/build-tools/platform-tools + required NDK
 RUN yes | sdkmanager --licenses >/dev/null \
     && sdkmanager --install \
         "platform-tools" \
         "platforms;android-${ANDROID_API}" \
-        "build-tools;${ANDROID_BUILD_TOOLS}"
+        "build-tools;${ANDROID_BUILD_TOOLS}" \
+        "ndk;27.0.12077973"
 
 # Permissions for the non-root vscode user
 RUN chown -R vscode:vscode ${ANDROID_HOME}

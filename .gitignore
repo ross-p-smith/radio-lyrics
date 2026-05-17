@@ -9,3 +9,4 @@ captures/
 .copilot-tracking/
 vendor-apks/
 app/src/debug/assets/fixtures/
+.android-home/cache/
