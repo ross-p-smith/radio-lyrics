@@ -31,6 +31,10 @@ RUN rm -f /etc/apt/sources.list.d/yarn.list \
         android-tools-adb \
     && rm -rf /var/lib/apt/lists/*
 
+# Some host setups start devcontainers with --group-add=kvm. Ensure the group
+# exists in the image so container startup does not fail.
+RUN getent group kvm >/dev/null || groupadd -r kvm
+
 # Install Android command-line tools
 RUN mkdir -p ${ANDROID_HOME}/cmdline-tools \
     && cd /tmp \

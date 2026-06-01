@@ -27,6 +27,11 @@ Build & install the debug APK:
 Run JVM unit tests (no device required):
     ./gradlew test
 
+Optional: Set up Android emulator (requires emulator image built with Dockerfile.emulator):
+    avdmanager create avd -n test-avd -k "system-images;android-34;google_apis;x86_64"
+    emulator -avd test-avd -no-window -no-audio -gpu swiftshader_indirect &
+    ./gradlew installDebug
+
 Authenticate the GitHub CLI (one-time, persists in the container volume):
     gh auth login
 EOF

@@ -1,6 +1,7 @@
 package com.example.radiolyric
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -15,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.radiolyric.data.local.SettingsRepository
+import com.example.radiolyric.devtools.AppLog as Log
+import com.example.radiolyric.playback.PlaybackService
 import com.example.radiolyric.ui.AppNavigation
 import com.example.radiolyric.ui.theme.RadioLyricTheme
 import com.example.radiolyric.usb.UsbPermissionGateway
@@ -31,9 +34,11 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var notificationPermissionLauncher: ActivityResultLauncher<String>
     private var notificationPermissionRequested = false
+    private var playbackServiceStartRequested = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        maybeStartPlaybackService()
         notificationPermissionLauncher =
                 registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
                     // Persist that we asked, regardless of grant/deny — Android only allows
@@ -50,6 +55,24 @@ class MainActivity : ComponentActivity() {
                 ) { AppNavigation() }
             }
         }
+    }
+
+    private fun maybeStartPlaybackService() {
+        if (playbackServiceStartRequested) return
+        playbackServiceStartRequested = true
+        val intent = Intent(this, PlaybackService::class.java).apply {
+            putExtra("trigger", "activity_launch")
+        }
+        Log.i(TAG, "Requesting PlaybackService start from MainActivity")
+        runCatching {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        ContextCompat.startForegroundService(applicationContext, intent)
+                    } else {
+                        applicationContext.startService(intent)
+                    }
+                }
+                .onSuccess { Log.i(TAG, "PlaybackService start request sent") }
+                .onFailure { Log.w(TAG, "Could not start PlaybackService from MainActivity", it) }
     }
 
     override fun onResume() {
@@ -84,6 +107,10 @@ class MainActivity : ComponentActivity() {
             if (settingsRepository.notificationPermissionAsked.first()) return@launch
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+    }
+
+    private companion object {
+        private const val TAG = "MainActivity"
     }
 }
 
